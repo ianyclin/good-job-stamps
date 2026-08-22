@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- 三個孩子的三種顏色各佔一塊，只在窄邊界過渡 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E9BFF"/>
+      <stop offset="0.30" stop-color="#2E9BFF"/>
+      <stop offset="0.42" stop-color="#FF5E96"/>
+      <stop offset="0.60" stop-color="#FF5E96"/>
+      <stop offset="0.72" stop-color="#8A5CFF"/>
+      <stop offset="1" stop-color="#8A5CFF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.8" cy="0.15" r="0.6">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#FFFFFF" stroke-opacity="0.94" stroke-width="18"/>
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#FFFFFF" stroke-opacity="0.58" stroke-width="8"/>
+  <polygon points="256,146 287,212 360,220 306,270 320,342 256,306 192,342 206,270 152,220 225,212" fill="#3C2860" fill-opacity="0.3" transform="translate(0,8)"/>
+  <polygon points="256,146 287,212 360,220 306,270 320,342 256,306 192,342 206,270 152,220 225,212" fill="#FFFDF8"/>
+  <polygon points="236,196 243,212 260,214 247,225 250,242 236,233 222,242 225,225 212,214 229,212" fill="#FFECBE" fill-opacity="0.92"/>
+</svg>
