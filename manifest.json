@@ -1,0 +1,20 @@
+{
+  "name": "好棒印章 — 給孩子的正向回饋集章簿",
+  "short_name": "好棒印章",
+  "description": "三個孩子各一本集章簿：做到一件具體的好事，就在月曆上蓋一個「你好棒！」。",
+  "lang": "zh-Hant",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E4F2FF",
+  "theme_color": "#E4F2FF",
+  "categories": ["kids", "lifestyle", "productivity"],
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

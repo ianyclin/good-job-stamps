@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<!-- 不加 maximum-scale：看不清楚的人要能兩指放大 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>好棒印章</title>
+<meta name="description" content="三個孩子各一本集章簿：做到一件具體的好事，就在月曆上蓋一個「你好棒！」。">
+<meta name="theme-color" id="themeColor" content="#E4F2FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="好棒印章">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+/* ───────── 主題變數：切換孩子時由 JS 一次改在 :root ───────── */
+:root{
+  --bg:#E4F2FF; --card:#FFFFFF; --accent:#4FB8FF; --accent-dark:#1C6FD1; --ink:#0F2E52;
+  --ink-rgb:15,46,82; --accent-rgb:79,184,255;
+  --gold:#F5C542; --gold-dark:#C98A1B; --gold-line:#E2B14A;
+  --grey:#6B6B6B; --grey-bg:#ECECEC; --grey-badge:#6B6B6B; --dim:#6B6B6B;
+  --font: ui-rounded, -apple-system, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font);
+  transition:background-color .25s ease; overflow:hidden;
+  -webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+  touch-action:manipulation;
+}
+input,textarea{-webkit-user-select:text;user-select:text;font-family:var(--font)}
+button{font-family:var(--font);color:inherit;cursor:pointer;-webkit-touch-callout:none}
+button:disabled{cursor:default}
+svg{display:block}
+
+#app{
+  height:100vh; height:100dvh; display:flex; flex-direction:column;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  overflow-y:auto; overflow-x:hidden;
+}
+
+/* ───────── 1. 孩子切換列 ───────── */
+.kids{flex:0 0 84px; display:flex; align-items:center; padding:0 6px 0 16px}
+.kid{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:none; border:0; padding:4px 0; position:relative; min-height:44px;
+}
+.kid .ava{
+  width:54px; height:54px; border-radius:50%; background:var(--card);
+  border:2px solid var(--k-accent); font-size:30px; line-height:1;
+  display:grid; place-items:center; position:relative;
+  transition:transform .2s ease, border-color .2s ease, border-width .2s ease;
+}
+.kid.on .ava{transform:scale(1.12); border:3px solid var(--k-dark)}
+.kid.bounce .ava{animation:kidBounce .22s ease-out}
+@keyframes kidBounce{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1.12)}}
+.kid .nm{font-size:13px; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.kid.on .nm{font-weight:700}
+.kid .bar{width:24px; height:4px; border-radius:2px; background:var(--accent-dark); opacity:0; transition:opacity .2s}
+.kid.on .bar{opacity:1}
+/* 今天還沒蓋章：右上角一個灰點（不是紅點） */
+.kid .nd{position:absolute; width:8px; height:8px; border-radius:50%; background:#B0B0B0; top:4px; right:calc(50% - 30px); display:none}
+.kid.nodot .nd{display:block}
+.gear{width:44px; height:44px; border:0; background:none; display:grid; place-items:center; color:rgba(var(--ink-rgb),.55); position:relative}
+.gear svg{width:26px; height:26px}
+.gear .bd{position:absolute; top:8px; right:8px; width:6px; height:6px; border-radius:50%; background:#B0B0B0; display:none}
+.gear.stale .bd{display:block}
+
+/* ───────── 2. 星星總數區 ───────── */
+.hero{flex:1 0 96px; max-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:none; border:0; width:100%; padding:0}
+.hero-row{display:flex; align-items:center; gap:14px}
+.hero-star{width:36px; height:36px}
+.hero-num{font-size:56px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-1px}
+.dots{display:grid; grid-template-columns:repeat(5,8px); gap:4px}
+.dots i{width:8px; height:8px; border-radius:50%; border:1.5px solid var(--accent-dark); display:block; transition:background-color .2s}
+.dots i.on{background:var(--accent); border-color:var(--accent)}
+.hero-sub{font-size:13px; color:rgba(var(--ink-rgb),.78); margin-top:6px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* 歷來累計：跨過每一個月份，一共蓋過幾顆 */
+.hero-total{font-size:12px; color:rgba(var(--ink-rgb),.6); margin-top:3px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hero-total b{font-weight:800; color:var(--accent-dark); font-size:13px}
+
+/* ───────── 3. 月曆 ───────── */
+.cal{flex:2 1 auto; min-height:0; padding:0 16px; display:flex; flex-direction:column; justify-content:center}
+.cal-head{height:44px; display:flex; align-items:center; justify-content:space-between}
+.cal-head button{height:44px; border:0; background:none; font-size:26px; color:var(--accent-dark); padding:0; line-height:1}
+.cal-head .nav{width:44px}
+.cal-head .cal-title{font-size:18px; font-weight:700; color:var(--ink); flex:1}
+.wk{display:grid; grid-template-columns:repeat(7,1fr); font-size:12px; color:var(--dim); text-align:center; height:20px; align-items:center}
+.grid-wrap{overflow:hidden}
+.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; touch-action:pan-y}
+.grid.slide-l{animation:slideL .2s ease-out}
+.grid.slide-r{animation:slideR .2s ease-out}
+@keyframes slideL{from{transform:translateX(40px);opacity:.3}to{transform:none;opacity:1}}
+@keyframes slideR{from{transform:translateX(-40px);opacity:.3}to{transform:none;opacity:1}}
+.cell{
+  aspect-ratio:1/1; border-radius:12px; border:0; padding:0; position:relative;
+  background:var(--card); box-shadow:inset 0 0 0 100px rgba(0,0,0,.02); overflow:hidden;
+}
+.cell.has{box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.cell.today{box-shadow:inset 0 0 0 2px var(--accent-dark)}
+.cell.gold{box-shadow:inset 0 0 0 2px var(--gold-line)}
+.cell.today.gold{box-shadow:inset 0 0 0 2px var(--accent-dark), inset 0 0 0 4px var(--gold-line)}
+.cell.future{opacity:.35; box-shadow:none}
+.cell.blank{visibility:hidden}
+.cell.shake{animation:shake .3s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.cell .d{position:absolute; top:4px; left:5px; font-size:11px; color:rgba(var(--ink-rgb),.72); line-height:1}
+.cell.today .d{color:var(--ink); font-weight:800}
+.cell svg.s{position:absolute; transform:translate(-50%,-50%) rotate(var(--r,0deg)); --s-fill:var(--accent); --s-stroke:var(--accent-dark)}
+.cell svg.s.pop{animation:starPop .15s ease-out}
+@keyframes starPop{0%{transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(0)}60%{transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(1.3)}100%{transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(1)}}
+.cell svg.o{position:absolute; left:50%; top:56%; width:20px; height:20px; transform:translate(-50%,-50%); opacity:.25}
+.cell .x{
+  position:absolute; left:78%; top:78%; transform:translate(-50%,-50%);
+  width:18px; height:18px; border-radius:50%; background:var(--accent-dark); color:#fff;
+  font-size:10px; font-weight:800; display:grid; place-items:center; line-height:1;
+}
+.cell .m{
+  position:absolute; top:3px; right:3px; width:16px; height:16px; border-radius:50%;
+  background:var(--grey-badge); color:#fff; font-size:10px; font-weight:700; display:grid; place-items:center; line-height:1;
+}
+.cell .m.fade{animation:fadeIn .3s}
+.cell .g{position:absolute; top:2px; right:3px; width:12px; height:12px; --s-fill:var(--gold); --s-stroke:var(--gold-dark)}
+.cell .g.withm{right:21px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.cell.flash{animation:cellFlash .2s}
+@keyframes cellFlash{0%{background:rgba(var(--accent-rgb),.3)}100%{background:var(--card)}}
+
+/* ───────── 4. 主操作列 ───────── */
+.actions{flex:0 0 96px; display:flex; align-items:center; gap:12px; padding:0 16px}
+.rbtn{width:52px; height:52px; border-radius:50%; background:var(--grey-bg); color:var(--grey); font-size:26px; border:0; display:grid; place-items:center; line-height:1; flex:0 0 52px; transition:opacity .2s}
+.rbtn.dim{opacity:.4}
+.rbtn:active{transform:scale(.94)}
+.big{
+  flex:1; height:72px; border-radius:36px; background:var(--accent-dark); color:#fff;
+  font-size:22px; font-weight:800; border:0; display:flex; align-items:center; justify-content:center; gap:8px;
+  box-shadow:0 6px 16px rgba(var(--accent-rgb),.4); transition:transform .08s, background-color .25s;
+}
+.big:active{transform:scale(.94)}
+.big svg{width:24px; height:24px; --s-fill:#fff; --s-stroke:rgba(0,0,0,.12)}
+
+/* ───────── 5. 家長小語 ───────── */
+.tip{flex:0 0 auto; min-height:52px; display:flex; align-items:center; gap:8px; padding:4px 16px 6px; font-size:13px; line-height:1.35; color:rgba(var(--ink-rgb),.8); background:none; border:0; width:100%; text-align:left}
+.tip svg{width:16px; height:16px; flex:0 0 16px; color:var(--accent-dark)}
+/* 膠囊字很小，用深色文字而不是主題色，淺色主題下才讀得清楚 */
+.tip .pill{font-size:11px; padding:3px 8px; border-radius:10px; background:rgba(var(--accent-rgb),.3); color:var(--ink); white-space:nowrap; flex:0 0 auto; font-weight:700}
+.tip .tx{flex:1; transition:opacity .15s}
+.tip.fade .tx{opacity:0}
+
+/* ───────── 蓋章動畫覆蓋層 ───────── */
+/* 粒子畫布要在慶祝遮罩「之上」，不然滿 100 的煙火全被蓋住看不到 */
+#fx{position:fixed; inset:0; pointer-events:none; z-index:76}
+#stampLayer{position:fixed; inset:0; pointer-events:none; z-index:55; display:none}
+#stampLayer.on{display:block}
+.stamp{
+  position:fixed; left:0; top:0; width:140px; height:140px; border-radius:50%;
+  background:var(--accent); opacity:0; will-change:transform;
+  box-shadow:0 10px 30px rgba(0,0,0,.18);
+}
+.stamp::before{content:""; position:absolute; inset:7px; border-radius:50%; border:2px dashed rgba(255,255,255,.9)}
+.stamp svg{position:absolute; left:50%; top:50%; width:84px; height:84px; transform:translate(-50%,-50%); --s-fill:#fff; --s-stroke:var(--accent-dark); --s-sw:1.2}
+.stamp.goldish{background:var(--gold)}
+.stamp.goldish svg{--s-stroke:var(--gold-dark)}
+.flash{position:fixed; left:0; top:0; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle, var(--accent) 0%, rgba(var(--accent-rgb),.35) 45%, transparent 70%); opacity:0; will-change:transform}
+#stampTxt{position:fixed; left:0; top:0; transform:translate(-50%,0); font-size:36px; font-weight:900; white-space:nowrap; opacity:0; will-change:transform; line-height:1.2}
+#stampTxt .st{position:absolute; left:0; top:0; -webkit-text-stroke:7px #fff; color:#fff}
+#stampTxt .ft{position:relative; color:var(--accent-dark)}
+
+/* ───────── 小慶祝：緞帶橫幅 ───────── */
+#banner{position:fixed; top:0; left:0; right:0; z-index:77; padding-top:env(safe-area-inset-top); transform:translateY(-120%); pointer-events:none; will-change:transform}
+#banner .rb{
+  margin:10px 20px 0; background:var(--accent-dark); color:#fff; text-align:center; padding:14px 28px;
+  clip-path:polygon(0 0,100% 0,calc(100% - 12px) 50%,100% 100%,0 100%,12px 50%);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}
+#banner .t1{font-size:20px; font-weight:800}
+#banner .t2{font-size:14px; opacity:.92; margin-top:4px}
+
+/* ───────── 大慶祝：滿 100 ───────── */
+#big{
+  position:fixed; inset:0; background:rgba(20,20,40,.88); z-index:75; display:none;
+  flex-direction:column; align-items:center; justify-content:center; color:#fff; text-align:center;
+  padding:calc(env(safe-area-inset-top) + 16px) 24px calc(env(safe-area-inset-bottom) + 24px); opacity:0; transition:opacity .3s;
+}
+#big.on{display:flex}
+#big .who{position:absolute; top:calc(env(safe-area-inset-top) + 14px); left:0; right:0; font-size:14px; opacity:.7}
+#big .bigstar{width:140px; height:140px; --s-fill:var(--gold); --s-stroke:var(--gold-dark); --s-sw:.6; opacity:0; will-change:transform; position:relative}
+#big .halo{position:absolute; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle, rgba(245,197,66,.55) 0%, rgba(245,197,66,0) 70%); opacity:0; will-change:transform}
+#big .h1{font-size:44px; font-weight:900; margin-top:18px; opacity:0}
+#big .h2{font-size:18px; opacity:0; margin-top:8px; line-height:1.5}
+#big .take{
+  margin-top:32px; height:72px; padding:0 40px; border-radius:36px; background:var(--gold); color:#4A2E12;
+  font-size:20px; font-weight:800; border:0; opacity:0; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.3);
+}
+#big .take.on{opacity:1; pointer-events:auto}
+#big .take:active{transform:scale(.95)}
+#big .skip{position:absolute; top:calc(env(safe-area-inset-top) + 8px); right:8px; background:none; border:0; color:#fff; opacity:0; font-size:13px; padding:12px; pointer-events:none; transition:opacity .3s}
+#big .skip.on{opacity:.7; pointer-events:auto}
+
+/* ───────── 原因面板（蓋完章後從底部滑入） ───────── */
+/* 原因面板刻意停在操作列「上方」：家長想連蓋第二顆時，大按鈕永遠是露出來的 */
+#reasonPanel{
+  position:fixed; left:0; right:0; bottom:calc(148px + env(safe-area-inset-bottom) + var(--kb, 0px)); background:var(--card); border-radius:20px 20px 0 0;
+  box-shadow:0 -6px 24px rgba(0,0,0,.14);
+  /* 收起時要退到「自己的高度 + 底下操作列」之外，不然會露一截在畫面上 */
+  transform:translateY(calc(100% + 200px)); transition:transform .24s cubic-bezier(.2,.8,.2,1);
+  z-index:65; padding:10px 16px 12px; will-change:transform; visibility:hidden;
+}
+#reasonPanel.on{transform:none; visibility:visible}
+#reasonPanel .ttl{font-size:14px; color:var(--dim); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+#reasonPanel .ttl button{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; min-width:56px; padding:0; margin:-10px 0; text-align:right}
+
+/* ───────── 共用：chips、toast、sheet ───────── */
+.chips{display:flex; flex-wrap:wrap; gap:8px}
+.chips.row{flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; margin:0 -16px; padding-left:16px; padding-right:16px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+.chips.row::-webkit-scrollbar{display:none}
+.chip{height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--ink); font-size:16px; white-space:nowrap; flex:0 0 auto; transition:background-color .12s, color .12s}
+.chip.on{background:var(--accent-dark); color:#fff}
+.chip.grey{border-color:var(--grey)}
+.chip.grey.on{background:var(--grey); border-color:var(--grey); color:#fff}
+.inrow{display:flex; gap:8px; margin-top:10px}
+.inrow input{flex:1; height:44px; border-radius:12px; border:1.5px solid #ddd; padding:0 12px; font-size:16px; background:#fff; color:var(--ink); min-width:0}
+.inrow input:focus{outline:none; border-color:var(--accent-dark)}
+.inrow button{height:44px; padding:0 16px; border-radius:12px; border:0; background:var(--accent-dark); color:#fff; font-size:16px; font-weight:700}
+.hide{display:none !important}
+
+#toast{
+  position:fixed; left:16px; right:16px; bottom:calc(156px + env(safe-area-inset-bottom)); background:#3A3A3A; color:#fff;
+  border-radius:14px; padding:10px 8px 10px 14px; font-size:14px; line-height:1.4; display:flex; align-items:center; gap:8px;
+  opacity:0; transform:translateY(10px); transition:.2s; z-index:80; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.25);
+}
+:root{--kb:0px}
+#toast.on{opacity:1; transform:none}
+#toast span{flex:1; pointer-events:none}
+#toast button{margin-left:auto; background:none; border:0; color:#FFD36B; font-weight:700; font-size:15px; min-height:44px; min-width:56px; padding:0 8px; white-space:nowrap; pointer-events:auto}
+/* 原因面板開著時，toast 再往上讓一層，兩者不重疊 */
+#reasonPanel.on ~ #toast{bottom:calc(280px + env(safe-area-inset-bottom))}
+
+.scrim{position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .2s; z-index:70}
+.scrim.on{opacity:1; pointer-events:auto}
+.sheet{
+  position:fixed; left:0; right:0; bottom:var(--kb, 0px); background:var(--card); border-radius:20px 20px 0 0;
+  transform:translateY(100%); transition:transform .24s cubic-bezier(.2,.8,.2,1); z-index:71;
+  max-height:88vh; max-height:88dvh; display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -6px 30px rgba(0,0,0,.15); will-change:transform;
+}
+.sheet.open{transform:none}
+.sheet.drag{transition:none}
+.sheet .hd{height:24px; display:grid; place-items:center; flex:0 0 24px; touch-action:none}
+.sheet .hd i{width:36px; height:4px; border-radius:2px; background:#ddd}
+.sheet .bd{overflow-y:auto; padding:4px 16px 20px; -webkit-overflow-scrolling:touch}
+.sheet h2{font-size:18px; font-weight:700; margin:4px 0 4px}
+.sheet .sub{font-size:14px; color:rgba(var(--ink-rgb),.82); line-height:1.55; margin:0 0 12px}
+.sheet .sub.warn{color:var(--dim)}
+.sheet .sec{font-size:13px; color:var(--dim); margin:16px 0 8px}
+.pbtn{width:100%; height:64px; border-radius:18px; border:0; background:var(--accent-dark); color:#fff; font-size:20px; font-weight:800; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px}
+.pbtn svg{width:24px; height:24px; --s-fill:#fff; --s-stroke:rgba(0,0,0,.12)}
+.pbtn:active{transform:scale(.97)}
+.lnk{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; padding:0 4px; display:block; margin:6px 0 0 auto}
+.list{display:flex; flex-direction:column}
+.row{display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.06); min-height:52px}
+.row .tm{font-size:12px; color:var(--dim); flex:0 0 40px}
+.row .ic{flex:0 0 22px; height:22px; display:grid; place-items:center}
+.row .ic svg{width:20px; height:20px; --s-fill:var(--accent); --s-stroke:var(--accent-dark)}
+.row .ic.m{color:var(--grey); font-size:18px; font-weight:700}
+.row .ic.g svg{--s-fill:var(--gold); --s-stroke:var(--gold-dark)}
+.row .rs{flex:1; font-size:15px; background:none; border:0; text-align:left; padding:6px 0; color:var(--ink); min-height:44px}
+.row .rs.empty{color:#767676}
+.row .del{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; min-width:52px; padding:0 0 0 8px; white-space:nowrap}
+.row .del.arm{color:#C0392B; font-weight:700}
+.empty-note{font-size:14px; color:#767676; padding:14px 0}
+.dgrp{font-size:13px; color:var(--dim); margin:14px 0 2px; font-weight:700}
+
+/* 長按扣除鈕 */
+.hold{
+  width:100%; height:64px; border-radius:16px; border:0; background:var(--grey); color:#fff; font-size:18px; font-weight:700;
+  position:relative; overflow:hidden; margin-top:16px; touch-action:none;
+}
+.hold .fill{position:absolute; left:0; top:0; bottom:0; width:0; background:#4A4A4A; transition:width .12s}
+.hold.holding .fill{transition:width .6s linear; width:100%}
+.hold span{position:relative}
+.hold:disabled{opacity:.5}
+
+/* 設定頁 */
+.kcard{border:1.5px solid rgba(0,0,0,.08); border-radius:16px; padding:12px; margin-bottom:12px}
+.kcard .top{display:flex; align-items:center; gap:10px}
+.kcard .top .ava{width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-size:26px; background:var(--k-bg); border:2px solid var(--k-accent); flex:0 0 44px}
+.kcard input{flex:1; height:44px; border-radius:12px; border:1.5px solid #ddd; padding:0 12px; font-size:16px; min-width:0; background:#fff; color:var(--ink)}
+.kcard input:focus{outline:none; border-color:var(--accent-dark)}
+.emos{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.emos button{width:44px; height:44px; border-radius:12px; border:1.5px solid transparent; background:rgba(0,0,0,.04); font-size:24px; padding:0}
+.emos button.on{border-color:var(--accent-dark); background:rgba(var(--accent-rgb),.15)}
+.swname{font-size:12px; color:var(--dim); margin-top:10px}
+.sw{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+.sw .swatch{width:44px; height:44px; border-radius:50%; border:2px solid transparent; background:var(--t-bg); padding:0; display:grid; place-items:center; position:relative}
+.sw .swatch i{width:22px; height:22px; border-radius:50%; background:var(--t-accent); box-shadow:inset 0 -6px 0 var(--t-dark); display:block}
+.sw .swatch.on{border-color:var(--t-dark)}
+.sw .swatch.on::after{content:"✓"; position:absolute; right:-1px; bottom:-1px; width:18px; height:18px; border-radius:50%; background:var(--t-dark); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center; line-height:1}
+/* 常用原因的可增刪標籤 */
+.rlist{display:flex; flex-wrap:wrap; gap:8px}
+.rtag{display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 10px 0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--ink); font-size:15px}
+.rtag em{font-style:normal; font-size:16px; color:var(--dim); width:22px; height:22px; display:grid; place-items:center; border-radius:50%; background:rgba(0,0,0,.06)}
+.rtag.mine{border-style:dashed}
+.rtag.off{border-color:#D0D0D0; color:#9A9A9A; text-decoration:line-through}
+.rtag.off em{color:var(--accent-dark); background:rgba(var(--accent-rgb),.25); text-decoration:none}
+.srow{display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:15px}
+.srow .note{font-size:13px; color:var(--dim); margin-top:3px; line-height:1.45}
+.toggle{width:52px; height:32px; border-radius:16px; background:#B0B0B0; border:0; position:relative; flex:0 0 52px; transition:background-color .2s; padding:0}
+.toggle::before{content:""; position:absolute; left:0; right:0; top:-6px; bottom:-6px}
+.toggle::after{content:""; position:absolute; top:3px; left:3px; width:26px; height:26px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.toggle.on{background:var(--accent-dark)}
+.toggle.on::after{transform:translateX(20px)}
+.sbtn{height:48px; padding:0 16px; border-radius:12px; border:1.5px solid var(--accent-dark); background:none; color:var(--accent-dark); font-size:16px; font-weight:700}
+.sbtn.fill{background:var(--accent-dark); color:#fff}
+.sbtn.warn{border-color:#C0392B; color:#C0392B}
+.sbtn.warn.fill{background:#C0392B; color:#fff}
+.sbtn:disabled{opacity:.4}
+.btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
+/* 字級一定要 16px：iOS 一碰到小於 16px 的輸入框就會自動放大整頁 */
+textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #ddd; padding:10px; font-size:16px; font-family:ui-monospace, Menlo, monospace; resize:none; margin-top:8px; background:#fff; color:var(--ink)}
+.snaps{display:flex; flex-direction:column}
+.snap{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:15px}
+.warncard{background:rgba(var(--accent-rgb),.22); border-left:4px solid var(--accent-dark); border-radius:10px; padding:12px 14px; font-size:14px; line-height:1.6; color:var(--ink); margin-bottom:12px}
+.help{font-size:14px; line-height:1.7; color:rgba(var(--ink-rgb),.85)}
+.help ol{padding-left:20px; margin:4px 0}
+.help b{color:var(--accent-dark)}
+
+/* 非主畫面模式的一次性提示：放在版面流裡（不是浮在上面），才不會蓋住家長小語與大按鈕 */
+#installHint{display:none; flex:0 0 auto; padding:6px 12px 0}
+#installHint.on{display:block}
+#installHint .ih{background:#333; color:#fff; border-radius:14px; padding:10px 4px 10px 14px; font-size:13px; line-height:1.45; display:flex; align-items:center; gap:6px}
+#installHint .ih span{flex:1}
+#installHint .ih button{background:none; border:0; color:#fff; font-size:20px; width:44px; height:44px; padding:0; opacity:.85; flex:0 0 44px}
+
+/* 矮螢幕（iPhone SE 這種 667px 高）：每一區縮一點，剛好不用捲動 */
+@media (max-height: 700px){
+  .kids{flex-basis:78px}
+  .kid .ava{width:50px; height:50px; font-size:28px}
+  .hero{flex-basis:84px}
+  .hero-num{font-size:48px}
+  .grid{gap:5px}
+  .actions{flex-basis:84px}
+  .big{height:64px}
+  .tip{flex-basis:46px}
+}
+@media (prefers-reduced-motion: reduce){
+  .kid.bounce .ava, .grid.slide-l, .grid.slide-r, .cell.shake, .cell.flash, .cell svg.s.pop{animation:none}
+  body, .sheet, #reasonPanel, #toast{transition:none}
+}
+</style>
+</head>
+<body>
+
+<!-- 星星只畫一次，其他地方都用 <use> 引用；顏色透過 CSS 變數 --s-fill / --s-stroke 傳進來 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="star" viewBox="0 0 24 24">
+      <polygon points="12,1.6 14.7,8.88 22.46,9.2 16.37,14.02 18.47,21.5 12,17.2 5.53,21.5 7.63,14.02 1.54,9.2 9.3,8.88"
+        style="fill:var(--s-fill,#FFC93C);stroke:var(--s-stroke,#C98A1B);stroke-width:var(--s-sw,1.5)" stroke-linejoin="round"/>
+      <ellipse cx="9.6" cy="8.2" rx="1.7" ry="1" fill="#fff" opacity=".8" transform="rotate(-30 9.6 8.2)"/>
+    </symbol>
+    <symbol id="star-o" viewBox="0 0 24 24">
+      <polygon points="12,1.6 14.7,8.88 22.46,9.2 16.37,14.02 18.47,21.5 12,17.2 5.53,21.5 7.63,14.02 1.54,9.2 9.3,8.88"
+        fill="none" style="stroke:var(--accent-dark)" stroke-width="1.6" stroke-dasharray="3 2" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="app">
+  <div id="installHint"><div class="ih"><span>用 Safari 的「分享 → 加入主畫面」把它裝成 app：資料才會留著，也才不會被 iPhone 自動清掉。</span><button id="ihClose" aria-label="關閉這個提示">×</button></div></div>
+
+  <header class="kids" id="kids"></header>
+
+  <button class="hero" id="hero">
+    <div class="hero-row">
+      <svg class="hero-star" style="--s-fill:var(--accent);--s-stroke:var(--accent-dark)"><use href="#star"/></svg>
+      <div class="hero-num" id="heroNum">0</div>
+      <div class="dots" id="dots"></div>
+    </div>
+    <div class="hero-sub" id="heroSub"></div>
+    <div class="hero-total" id="heroTotal"></div>
+  </button>
+
+  <section class="cal">
+    <div class="cal-head">
+      <button class="nav" id="prevM" aria-label="上個月">‹</button>
+      <button class="cal-title" id="calTitle"></button>
+      <button class="nav" id="nextM" aria-label="下個月">›</button>
+    </div>
+    <div class="wk"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  </section>
+
+  <div class="actions">
+    <button class="rbtn" id="minusBtn" aria-label="扣除一顆">−</button>
+    <button class="big" id="bigBtn"><svg><use href="#star"/></svg><span>今天好棒！</span></button>
+    <button class="rbtn" id="editBtn" aria-label="打開今天">✎</button>
+  </div>
+
+  <button class="tip" id="tip">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg>
+    <span class="pill" id="tipCat"></span>
+    <span class="tx" id="tipTx"></span>
+  </button>
+</div>
+
+<!-- 動畫層 -->
+<div id="stampLayer">
+  <div class="flash" id="flash"></div>
+  <div class="stamp" id="stampEl"><svg><use href="#star"/></svg></div>
+  <div id="stampTxt"><span class="st">你好棒！</span><span class="ft">你好棒！</span></div>
+</div>
+<canvas id="fx"></canvas>
+
+<div id="banner" role="status" aria-live="polite"><div class="rb"><div class="t1" id="bannerT1"></div><div class="t2" id="bannerT2"></div></div></div>
+
+<div id="big" role="dialog" aria-modal="true" aria-labelledby="bigH1">
+  <div class="who" id="bigWho"></div>
+  <button class="skip" id="bigSkip">先關起來</button>
+  <div class="halo" id="bigHalo"></div>
+  <svg class="bigstar" id="bigStar"><use href="#star"/></svg>
+  <div class="h1" id="bigH1"></div>
+  <div class="h2" id="bigH2"></div>
+  <button class="take" id="bigTake">收下 ⭐</button>
+</div>
+
+<div id="reasonPanel">
+  <div class="ttl"><span>加上原因？（可以不填）</span><button id="rpUndo">撤銷</button></div>
+  <div class="chips row" id="rpChips"></div>
+  <div class="inrow hide" id="rpCustom"><input id="rpInput" placeholder="他做了什麼？" maxlength="40" enterkeyhint="done"><button id="rpSave">儲存</button></div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"><span id="toastTx"></span><button id="toastBtn" class="hide"></button></div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="daySheet" role="dialog" aria-modal="true" aria-label="這一天的紀錄"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="dayBd"></div></div>
+<div class="sheet" id="deductSheet" role="dialog" aria-modal="true" aria-label="扣除一顆"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="deductBd"></div></div>
+<div class="sheet" id="recordsSheet" role="dialog" aria-modal="true" aria-label="全部紀錄"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="recordsBd"></div></div>
+<div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="設定"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="settingsBd"></div></div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════
+   好棒印章 — 主程式
+   原則：先寫入再播動畫；原因永遠選填；扣除不表演；三個孩子不比較。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ───────── 常數 ───────── */
+/* 每一套的深色（accentDark）都驗算過白字對比 ≥ 4.5、文字色對底色 ≥ 11，
+   在陽光下也看得清楚。要再加新色請照這個標準算過再加。 */
+const THEMES = [
+  { name:'海洋藍', bg:'#E4F2FF', card:'#FFFFFF', accent:'#4FB8FF', accentDark:'#1C6FD1', ink:'#0F2E52' },
+  { name:'莓果粉', bg:'#FFE9F0', card:'#FFFFFF', accent:'#FF7AA8', accentDark:'#C2185B', ink:'#4D1A2E' },
+  { name:'葡萄紫', bg:'#F3EEFF', card:'#FFFFFF', accent:'#9B7BFF', accentDark:'#6547CF', ink:'#2A2340' },
+  { name:'太陽橘', bg:'#FFF1DC', card:'#FFFFFF', accent:'#FFB52E', accentDark:'#BF5400', ink:'#4A2E12' },
+  { name:'森林綠', bg:'#E6F7EC', card:'#FFFFFF', accent:'#54CC8E', accentDark:'#157F4E', ink:'#0F3A26' },
+  { name:'蜜桃粉', bg:'#FFEFE9', card:'#FFFFFF', accent:'#FFA183', accentDark:'#C0451F', ink:'#4A2118' },
+  { name:'夢幻桃', bg:'#FBE9FF', card:'#FFFFFF', accent:'#E07BFF', accentDark:'#9013A8', ink:'#3D1145' },
+  { name:'薰衣草', bg:'#EFEFFB', card:'#FFFFFF', accent:'#8E8FE8', accentDark:'#4A4BC4', ink:'#22224A' },
+  { name:'湖水青', bg:'#E0F6F7', card:'#FFFFFF', accent:'#3FC8D0', accentDark:'#0E7480', ink:'#0D3439' },
+  { name:'檸檬黃', bg:'#FFF8D6', card:'#FFFFFF', accent:'#FFD43B', accentDark:'#8A6300', ink:'#443413' },
+  { name:'石墨藍', bg:'#EAEEF5', card:'#FFFFFF', accent:'#8296B8', accentDark:'#3F5273', ink:'#1B2436' },
+];
+const EMOJIS = ['🦁','🦖','🚀','⚽️','🐳','🦊','🐻','🐯','🐰','🦄','🐱','🦋','🌸','🐥','🐼','🐨'];
+const REASONS = ['自己收玩具','幫忙做家事','跟兄弟姊妹分享','自己刷牙洗臉','好好吃飯','準時上床','寫完功課','說謝謝或對不起','有耐心等','勇敢試了一次'];
+const DEDUCT_REASONS = ['說好的沒做到','動手推人或打人','東西亂丟不收','對人沒禮貌'];
+const TIPS = [
+  ['找事實','多找出明確可以蓋好棒的事實給孩子正向回饋喔'],
+  ['找事實','今天找一件他「做了」的事，不是「沒做錯」的事。'],
+  ['找事實','小到不行的事也算：自己把鞋放好、等別人說完話。'],
+  ['找事實','有耐心等、忍住沒搶、輕聲說話，這些不吵不鬧的好事最容易被漏掉。'],
+  ['怎麼說','不說「你好乖」，說「你剛剛自己把碗拿去水槽」，孩子才知道下次要做什麼。'],
+  ['怎麼說','蓋完章把原因唸給孩子聽，他記住的是那句話，不是星星。'],
+  ['怎麼說','誇「你試了三次才成功」，比誇「你好聰明」更能讓他下次再試。'],
+  ['怎麼說','可以問他：「你剛剛怎麼做到的？」讓他自己講。'],
+  ['當下','好事發生後一分鐘內蓋，比晚上一次補蓋五顆更有用。'],
+  ['當下','蓋章的時候把手機轉過去給孩子看，這一秒是他的。'],
+  ['扣之前','扣一顆之前先深呼吸，說清楚是哪一件事，不是他這個人。'],
+  ['扣之前','如果這週扣的比蓋的多，先看看是不是標準定太高了。'],
+  ['不比較','三個孩子的星星不用拿來比，各自跟昨天的自己比就好。'],
+  ['別當貨幣','星星是紀錄不是薪水；孩子開始問「這樣有幾顆」時，把話題拉回那件事本身。'],
+];
+const COPY_TEN = ['十顆星星，十件你做到的事。','一顆一顆蓋出來的，沒有一顆是白來的。','這十顆，每一顆都有一個故事。','又十顆了，你自己有發現嗎？'];
+const COPY_HUNDRED = ['〔名字〕，這是你一件一件做到的。','〔數字〕 件做到的事，我們都記得。','不是一天蓋的，是你一天一天做到的。'];
+const WD = ['日','一','二','三','四','五','六'];
+const KEY = 'haobang.v1';
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ───────── 小工具 ───────── */
+const $ = id => document.getElementById(id);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const pad = n => String(n).padStart(2, '0');
+/* 日期 key 一律用本地時間自己組，禁止 toISOString（台灣晚上蓋的章會跑到隔天） */
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayKey = () => dkey(new Date());
+const parseKey = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); };
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if (attrs) for (const k in attrs){
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'style') el.style.cssText = v;
+    else if (k === 'text') el.textContent = v;           /* 一律 textContent，不用 innerHTML */
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()){
+    if (c == null || c === false) continue;
+    el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+function svgStar(cls, outline){
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(NS, 'svg');
+  if (cls) s.setAttribute('class', cls);
+  const u = document.createElementNS(NS, 'use');
+  u.setAttribute('href', outline ? '#star-o' : '#star');
+  u.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', outline ? '#star-o' : '#star');
+  s.append(u);
+  return s;
+}
+/* Web Animations 小包裝：播完把最後一格寫進 inline style 再取消，避免 fill:forwards 疊一堆 */
+function anim(el, kf, o){
+  const opt = typeof o === 'number' ? { duration:o } : o;
+  let a;
+  try { a = el.animate(kf, Object.assign({ fill:'forwards' }, opt)); }
+  catch (e) { return Promise.resolve(); }
+  return a.finished.then(() => {
+    const last = kf[kf.length-1];
+    for (const k in last){ if (k !== 'offset' && k !== 'easing') el.style[k] = last[k]; }
+    a.cancel();
+  }).catch(() => {});
+}
+function hexRgb(hex){ const n = parseInt(hex.slice(1), 16); return `${n>>16},${(n>>8)&255},${n&255}`; }
+
+/* ───────── 資料 ───────── */
+let state = null;
+let lastSaveOk = true;
+function fresh(){
+  return {
+    version: 1,
+    settings: {
+      sound:true, lastBackupAt:null, hintDismissed:false,
+      /* 自訂原因全家共用一份，好管理；「最近用過」才是每個孩子各自的 */
+      customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[],
+    },
+    lastKid: 'k1', tipOrder: [], tipIndex: 0,
+    kids: [
+      { id:'k1', name:'大寶', emoji:'🦁', theme:0, celebrated:[], recentReasons:[] },
+      { id:'k2', name:'二寶', emoji:'🐰', theme:1, celebrated:[], recentReasons:[] },
+      { id:'k3', name:'三寶', emoji:'🦄', theme:2, celebrated:[], recentReasons:[] },
+    ],
+    events: [],
+  };
+}
+/* 把讀進來的資料整理成乾淨的樣子。
+   這個函式必須「永遠不拋例外」：它同時是開檔路徑與還原備份路徑，
+   一旦拋錯就會退回空白資料，然後被下一次 save() 覆蓋掉真正的紀錄。
+   所以一律白名單取值、每個欄位都限長度與數量，不用 Object.assign 照單全收。 */
+function normalize(raw){
+  const base = fresh();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base;
+  const str = (v, max) => (typeof v === 'string' ? v : '').slice(0, max);
+  const rawSet = (raw.settings && typeof raw.settings === 'object') ? raw.settings : {};
+  const lb = typeof rawSet.lastBackupAt === 'string' && !isNaN(new Date(rawSet.lastBackupAt).getTime()) ? rawSet.lastBackupAt : null;
+  const strList = (a, max, cap) => [...new Set((Array.isArray(a) ? a : [])
+    .filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().slice(0, max)))].slice(0, cap);
+  const s = {
+    version: 1,
+    settings: {
+      sound: rawSet.sound === undefined ? true : !!rawSet.sound,
+      lastBackupAt: lb,
+      hintDismissed: !!rawSet.hintDismissed,
+      customReasons: strList(rawSet.customReasons, 30, 40),
+      hiddenReasons: strList(rawSet.hiddenReasons, 30, 40),
+      customDeductReasons: strList(rawSet.customDeductReasons, 30, 40),
+      hiddenDeductReasons: strList(rawSet.hiddenDeductReasons, 30, 40),
+    },
+    lastKid: 'k1', tipOrder: [], tipIndex: 0, kids: [], events: [],
+  };
+
+  const rawKids = (Array.isArray(raw.kids) && raw.kids.length === 3) ? raw.kids : base.kids;
+  /* id 一律由位置決定（k1/k2/k3）：備份裡若有重複或壞掉的 id，三個孩子會混在一起 */
+  s.kids = base.kids.map((d, i) => {
+    const k = (rawKids[i] && typeof rawKids[i] === 'object') ? rawKids[i] : {};
+    const emoji = Array.from(str(k.emoji, 16)).slice(0, 2).join('') || d.emoji;
+    /* 舊版把自訂原因存在各個孩子底下，這裡順手收攏到共用的那一份 */
+    strList(k.customReasons, 30, 40).forEach(r => {
+      if (!s.settings.customReasons.includes(r) && s.settings.customReasons.length < 40) s.settings.customReasons.push(r);
+    });
+    return {
+      id: 'k' + (i + 1),
+      name: (str(k.name, 12).trim()) || d.name,
+      emoji,
+      theme: (Number.isInteger(k.theme) && k.theme >= 0 && k.theme < THEMES.length) ? k.theme : i,
+      celebrated: (Array.isArray(k.celebrated) ? k.celebrated : [])
+        .map(Number).filter(n => Number.isInteger(n) && n > 0 && n <= 1e6).slice(-500),
+      recentReasons: strList(k.recentReasons, 60, 6),
+    };
+  });
+
+  const ids = new Set();
+  s.events = (Array.isArray(raw.events) ? raw.events : [])
+    .filter(e => e && typeof e === 'object'
+      && ['plus', 'minus', 'gold'].includes(e.type)
+      && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '')
+      && dkey(parseKey(e.date)) === e.date            /* 2026-02-30 這種不存在的日期擋掉 */
+      && ['k1', 'k2', 'k3'].includes(e.kid))
+    .slice(0, 60000)
+    .map((e, i) => {
+      let ts = Number(e.ts);
+      if (!Number.isFinite(ts) || ts < 0 || ts > 8.64e15) ts = 0;
+      let id = str(e.id, 40) || ('e' + ts + '-' + i);
+      while (ids.has(id)) id = id + '-' + i;          /* id 撞號會讓刪除／補原因動到錯的那一筆 */
+      ids.add(id);
+      const n = Number(e.n);
+      return { id, kid:e.kid, type:e.type, date:e.date, ts, reason: str(e.reason, 60),
+        ...(e.type === 'gold' && Number.isInteger(n) && n > 0 ? { n } : {}) };
+    });
+
+  if (['k1', 'k2', 'k3'].includes(raw.lastKid)) s.lastKid = raw.lastKid;
+  s.tipOrder = (Array.isArray(raw.tipOrder) ? raw.tipOrder : [])
+    .filter(i => Number.isInteger(i) && i >= 0 && i < TIPS.length);
+  s.tipIndex = Math.min(Math.max(0, Number(raw.tipIndex) || 0), s.tipOrder.length);
+  return s;
+}
+function load(){
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) {}
+  try {
+    state = normalize(JSON.parse(raw || 'null'));
+  } catch (e) {
+    /* 讀不懂就先把原始內容另存一份再退回空白，
+       不然啟動時的第一次 save() 會把使用者幾個月的紀錄直接蓋掉 */
+    state = fresh();
+    if (raw){
+      try { localStorage.setItem(KEY + '.broken.' + Date.now(), raw); } catch (e2) {}
+      setTimeout(() => toast('資料讀取失敗，原始內容已另外保留，請先到設定頁備份', { ms:8000 }), 400);
+    }
+  }
+}
+function save(){
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+    if (!lastSaveOk){ lastSaveOk = true; renderHero(); }
+    scheduleSnapshot();
+  }
+  catch (e) {
+    /* 存不進去是最嚴重的狀況：畫面上星星都在、其實一關 app 就沒了。
+       所以除了跳一次提示，總數下面也留一個常駐標記，不會被下一個 toast 蓋掉。 */
+    lastSaveOk = false;
+    try { renderHero(); } catch (e2) {}
+    toast('存不進去（可能容量滿了或在私密瀏覽），請先到設定頁備份', { ms:8000, action:'去備份', onAction: openSettings });
+  }
+}
+let idSeq = 0;
+const newId = () => 'e' + Date.now() + '-' + (idSeq++);
+
+/* ───────── 自動快照 ─────────
+   每次改動後把整份資料另外存一份到 IndexedDB，保留最近 20 份與每天最後一份（60 天）。
+   這是「誤刪、誤扣、資料毀損」的救命索 —— 但它跟主資料在同一支手機上，
+   手機掉了或把 app 刪掉一樣會沒有，所以設定頁還是會催你偶爾匯出一份。 */
+const DB_NAME = 'good_job_stamps', STORE = 'snapshots';
+let dbPromise = null;
+function openDB(){
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise(resolve => {
+    try {
+      const q = indexedDB.open(DB_NAME, 1);
+      q.onupgradeneeded = () => {
+        const db = q.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath:'ts' });
+      };
+      q.onsuccess = () => resolve(q.result);
+      q.onerror = () => resolve(null);
+      setTimeout(() => resolve(null), 3000);
+    } catch (e) { resolve(null); }
+  });
+  return dbPromise;
+}
+let snapTimer = 0;
+function scheduleSnapshot(){
+  clearTimeout(snapTimer);
+  /* 節流：連蓋五顆只會在最後存一份，不會每按一下就寫一次資料庫 */
+  snapTimer = setTimeout(() => { takeSnapshot().catch(() => {}); }, 4000);
+}
+async function takeSnapshot(){
+  const db = await openDB();
+  if (!db) return;
+  const raw = JSON.stringify(state);
+  const now = Date.now();
+  const rec = {
+    ts: now, day: todayKey(), raw,
+    stars: state.kids.map(k => ({ name:k.name, emoji:k.emoji, n:netOf(k.id) })),
+    events: state.events.length,
+  };
+  await new Promise(res => {
+    try {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(rec);
+      tx.oncomplete = res; tx.onerror = res; tx.onabort = res;
+    } catch (e) { res(); }
+  });
+  await pruneSnapshots(db);
+}
+async function listSnapshots(){
+  const db = await openDB();
+  if (!db) return [];
+  return new Promise(res => {
+    try {
+      const out = [];
+      const cur = db.transaction(STORE).objectStore(STORE).openCursor(null, 'prev');
+      cur.onsuccess = () => { const c = cur.result; if (!c) return res(out); out.push(c.value); c.continue(); };
+      cur.onerror = () => res(out);
+    } catch (e) { res([]); }
+  });
+}
+async function pruneSnapshots(db){
+  const all = await listSnapshots();
+  if (all.length <= 20) return;
+  const keep = new Set(all.slice(0, 20).map(r => r.ts));      /* 最近 20 份一定留著 */
+  const seenDay = new Set(); const cutoff = Date.now() - 60 * 864e5;
+  for (const r of all){
+    if (keep.has(r.ts)) { seenDay.add(r.day); continue; }
+    if (r.ts >= cutoff && !seenDay.has(r.day)){ seenDay.add(r.day); keep.add(r.ts); }   /* 每天再留最新的一份 */
+  }
+  const drop = all.filter(r => !keep.has(r.ts)).map(r => r.ts);
+  if (!drop.length) return;
+  try {
+    const tx = db.transaction(STORE, 'readwrite');
+    const os = tx.objectStore(STORE);
+    drop.forEach(ts => os.delete(ts));
+  } catch (e) {}
+}
+
+/* 推算值（不存） */
+const kidById = id => state.kids.find(k => k.id === id);
+const cur = () => kidById(state.lastKid);
+const eventsOf = kid => state.events.filter(e => e.kid === kid);
+const netOf = kid => Math.max(0, eventsOf(kid).filter(e => e.type==='plus').length - eventsOf(kid).filter(e => e.type==='minus').length);
+function monthStats(kid, y, m){
+  const p = `${y}-${pad(m+1)}-`;
+  const ev = eventsOf(kid).filter(e => e.date.startsWith(p));
+  return { plus: ev.filter(e => e.type==='plus').length, minus: ev.filter(e => e.type==='minus').length };
+}
+function dayMap(kid){
+  const map = {};
+  for (const e of eventsOf(kid)){ (map[e.date] = map[e.date] || []).push(e); }
+  return map;
+}
+const stampedToday = kid => eventsOf(kid).some(e => e.type==='plus' && e.date === todayKey());
+function theme(kid){ return THEMES[kid.theme] || THEMES[0]; }
+/* 可以用的原因清單＝內建的（扣掉被隱藏的）＋ 自己加的 */
+function reasonPool(deduct){
+  const st = state.settings;
+  const base = deduct ? DEDUCT_REASONS : REASONS;
+  const hidden = deduct ? st.hiddenDeductReasons : st.hiddenReasons;
+  const custom = deduct ? st.customDeductReasons : st.customReasons;
+  return [...base.filter(r => !hidden.includes(r)), ...custom];
+}
+/* 這個孩子最近用過的排最前面：三個孩子年紀不同，常做的事本來就不一樣 */
+function reasonChipsFor(kid){
+  const pool = reasonPool(false);
+  const seen = new Set(); const out = [];
+  for (const r of [...kid.recentReasons.filter(r => pool.includes(r)), ...pool]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
+  return out;
+}
+function rememberReason(kid, r, deduct){
+  if (!r) return;
+  if (!deduct) kid.recentReasons = [r, ...kid.recentReasons.filter(x => x !== r)].slice(0, 6);
+  const st = state.settings;
+  const base = deduct ? DEDUCT_REASONS : REASONS;
+  const custom = deduct ? st.customDeductReasons : st.customReasons;
+  /* 手打過的原因自動變成常用選項，下次不用再打一次 */
+  if (!base.includes(r) && !custom.includes(r)){
+    custom.push(r);
+    if (custom.length > 40) custom.shift();
+  }
+}
+
+/* 累積了一些紀錄、又超過 14 天沒把備份帶出這支手機，就該提醒了 */
+function backupOverdue(){
+  if (state.events.length < 10) return false;
+  const lb = state.settings.lastBackupAt ? new Date(state.settings.lastBackupAt).getTime() : 0;
+  return Date.now() - lb > 14 * 864e5;
+}
+
+/* ───────── 畫面狀態 ───────── */
+let view = (() => { const d = new Date(); return { y:d.getFullYear(), m:d.getMonth() }; })();
+let TODAY = todayKey();
+
+/* ───────── 主題 ───────── */
+function applyTheme(){
+  const t = theme(cur()); const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--card', t.card); r.setProperty('--accent', t.accent);
+  r.setProperty('--accent-dark', t.accentDark); r.setProperty('--ink', t.ink);
+  r.setProperty('--ink-rgb', hexRgb(t.ink)); r.setProperty('--accent-rgb', hexRgb(t.accent));
+  $('themeColor').setAttribute('content', t.bg);
+}
+
+/* ───────── 1. 孩子切換列 ───────── */
+function renderKids(){
+  const host = $('kids'); host.textContent = '';
+  for (const k of state.kids){
+    const t = theme(k);
+    const b = h('button', { class:'kid' + (k.id === state.lastKid ? ' on' : '') + (stampedToday(k.id) ? '' : ' nodot'),
+      style:`--k-accent:${t.accent};--k-dark:${t.accentDark}`, 'aria-label':`切換到 ${k.name}`, 'aria-pressed': k.id === state.lastKid ? 'true' : 'false',
+      onclick: () => switchKid(k.id) },
+      h('div', { class:'ava', text:k.emoji }), h('span', { class:'nd' }),
+      h('div', { class:'nm', text:k.name }), h('div', { class:'bar' }));
+    host.append(b);
+  }
+  const g = h('button', { class:'gear' + (backupOverdue() ? ' stale' : ''), 'aria-label':'設定', onclick: openSettings });
+  g.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><i class="bd"></i>';
+  host.append(g);
+}
+function switchKid(id){
+  if (id === state.lastKid) return;
+  state.lastKid = id; save();
+  SFX.tick();
+  applyTheme(); renderAll();
+  const el = [...$('kids').querySelectorAll('.kid')].find(b => b.classList.contains('on'));
+  if (el){ el.classList.add('bounce'); setTimeout(() => el.classList.remove('bounce'), 300); }
+  nextTip();
+}
+
+/* ───────── 2. 總數區 ───────── */
+function renderHero(){
+  const k = cur(); const n = netOf(k.id);
+  $('heroNum').textContent = n;
+  const dots = $('dots'); dots.textContent = '';
+  for (let i = 0; i < 10; i++) dots.append(h('i', { class: i < n % 10 ? 'on' : '' }));
+  const ms = monthStats(k.id, view.y, view.m);
+  const nextMile = n % 10 === 0 && n > 0 ? n + 10 : Math.ceil((n + 1) / 10) * 10;
+  const nextBig = Math.ceil((n + 1) / 100) * 100;
+  const left = (nextBig - n <= 10 ? nextBig : nextMile) - n;
+  const parts = [`${view.y === new Date().getFullYear() && view.m === new Date().getMonth() ? '這個月' : `${view.m+1} 月`} ⭐ ${ms.plus}`];
+  if (ms.minus) parts.push(`扣 ${ms.minus}`);
+  parts.push(`再 ${left} 顆滿 ${n + left}`);
+  if (!lastSaveOk) parts.push('⚠️ 尚未存檔');
+  $('heroSub').textContent = parts.join(' ・ ');
+
+  /* 第二行：歷來累計（跨所有月份）。大數字是「現在有幾顆」，這一行是「一共蓋過幾顆」 */
+  const all = eventsOf(k.id);
+  const totalPlus = all.filter(e => e.type === 'plus').length;
+  const totalMinus = all.filter(e => e.type === 'minus').length;
+  const el = $('heroTotal'); el.textContent = '';
+  let totalText = '';
+  if (totalPlus){
+    const first = all.filter(e => e.type === 'plus').map(e => e.date).sort()[0];
+    const fd = parseKey(first);
+    const days = Math.floor((parseKey(todayKey()) - fd) / 864e5) + 1;
+    el.append('一共蓋過 ', h('b', { text:String(totalPlus) }), ' 顆');
+    totalText = `一共蓋過 ${totalPlus} 顆`;
+    if (totalMinus){ el.append(` ・ 扣過 ${totalMinus} 顆`); totalText += `，扣過 ${totalMinus} 顆`; }
+    const tail = ` ・ 從 ${fd.getMonth()+1}/${fd.getDate()} 起第 ${days} 天`;
+    el.append(tail); totalText += tail;
+  } else {
+    el.textContent = '還沒有星星 —— 今天找一件他做到的小事';
+    totalText = el.textContent;
+  }
+  /* aria-label 會蓋掉按鈕內的文字，所以要自己把數字唸出來，否則 VoiceOver 只會說「打開紀錄」 */
+  $('hero').setAttribute('aria-label', `${k.name} 目前 ${n} 顆星星，${parts.join('，')}，${totalText}。點一下打開紀錄`);
+}
+
+/* ───────── 3. 月曆 ───────── */
+function renderCalendar(){
+  const k = cur(); const map = dayMap(k.id);
+  $('calTitle').textContent = `${view.y} 年 ${view.m+1} 月`;
+  const grid = $('grid'); grid.textContent = '';
+  const first = new Date(view.y, view.m, 1);
+  const startDow = first.getDay();
+  const dim = new Date(view.y, view.m+1, 0).getDate();
+  for (let i = 0; i < 42; i++){
+    const day = i - startDow + 1;
+    if (day < 1 || day > dim){ grid.append(h('div', { class:'cell blank' })); continue; }
+    const key = `${view.y}-${pad(view.m+1)}-${pad(day)}`;
+    grid.append(buildCell(key, day, map[key] || []));
+  }
+}
+function buildCell(key, day, evs){
+  const plus = evs.filter(e => e.type==='plus').length;
+  const minus = evs.filter(e => e.type==='minus').length;
+  const gold = evs.some(e => e.type==='gold');
+  const isToday = key === TODAY, future = key > TODAY;
+  const cell = h('button', { class:'cell' + (plus ? ' has' : '') + (isToday ? ' today' : '') + (future ? ' future' : '') + (gold ? ' gold' : ''),
+    'data-date': key, 'aria-label': `${Number(key.slice(5,7))} 月 ${day} 日，${plus} 顆星星${minus ? `，${minus} 次扣除` : ''}`,
+    onclick: () => onCellTap(key, cell) });
+  cell.append(h('span', { class:'d', text:day }));
+  if (isToday && plus === 0) cell.append(svgStar('o', true));
+  const layouts = {
+    1: [[50,56,24]],
+    2: [[30,55,18],[70,60,18]],
+    3: [[50,42,16],[32,72,16],[68,72,16]],
+    4: [[35,45,14],[65,45,14],[35,75,14],[65,75,14]],
+  };
+  const lay = plus >= 5 ? [[50,56,24]] : (layouts[plus] || []);
+  lay.forEach(([x, y, sz], idx) => {
+    const s = svgStar('s');
+    const rot = (day*7 + idx*13) % 17 - 8;
+    s.style.cssText = `left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;--r:${rot}deg`;
+    cell.append(s);
+  });
+  if (plus >= 5) cell.append(h('span', { class:'x', text:'×'+plus }));
+  if (gold){ const g = svgStar('g' + (minus ? ' withm' : '')); cell.append(g); }
+  if (minus) cell.append(h('span', { class:'m', text:'−'+minus }));
+  return cell;
+}
+function onCellTap(key, cell){
+  /* 用當下算出來的今天，不用快取的 TODAY：app 開著跨過午夜時，新的一天不該被當成未來 */
+  if (key > todayKey()){ cell.classList.remove('shake'); void cell.offsetWidth; cell.classList.add('shake'); return; }
+  openDay(key);
+}
+function gotoMonth(dy, dir){
+  view.m += dy;
+  if (view.m < 0){ view.m = 11; view.y--; } if (view.m > 11){ view.m = 0; view.y++; }
+  renderCalendar(); renderHero();
+  const g = $('grid'); g.classList.remove('slide-l','slide-r'); void g.offsetWidth; g.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
+}
+$('prevM').onclick = () => gotoMonth(-1, -1);
+$('nextM').onclick = () => gotoMonth(1, 1);
+$('calTitle').onclick = () => { const d = new Date(); const dir = (d.getFullYear()*12+d.getMonth()) - (view.y*12+view.m); view = { y:d.getFullYear(), m:d.getMonth() }; renderCalendar(); renderHero(); if (dir) { const g=$('grid'); g.classList.add(dir>0?'slide-l':'slide-r'); } };
+/* 在格子區左右滑換月 */
+(() => {
+  let sx = 0, sy = 0, on = false;
+  const g = $('grid');
+  g.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; on = true; }, { passive:true });
+  g.addEventListener('touchend', e => {
+    if (!on) return; on = false;
+    const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 40) gotoMonth(dx < 0 ? 1 : -1, dx < 0 ? 1 : -1);
+  }, { passive:true });
+})();
+
+/* ───────── 5. 家長小語 ───────── */
+function nextTip(){
+  if (!state.tipOrder.length || state.tipIndex >= state.tipOrder.length){
+    const o = TIPS.map((_, i) => i);
+    for (let i = o.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [o[i], o[j]] = [o[j], o[i]]; }
+    state.tipOrder = o; state.tipIndex = 0;
+  }
+  const [cat, tx] = TIPS[state.tipOrder[state.tipIndex]] || TIPS[0];
+  state.tipIndex++; save();
+  const el = $('tip'); el.classList.add('fade');
+  setTimeout(() => { $('tipCat').textContent = cat; $('tipTx').textContent = tx; el.classList.remove('fade'); }, 150);
+}
+$('tip').onclick = nextTip;
+
+function renderAll(){
+  TODAY = todayKey();
+  renderKids(); renderHero(); renderCalendar();
+  $('minusBtn').classList.toggle('dim', netOf(state.lastKid) === 0);
+}
+
+/* ───────── 粒子引擎（一張 canvas、一個 rAF 迴圈、沒粒子就停） ───────── */
+const FX = (() => {
+  const cv = $('fx'); const ctx = cv.getContext('2d');
+  let ps = [], raf = 0, last = 0, W = 0, H = 0;
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W*dpr; cv.height = H*dpr; cv.style.width = W+'px'; cv.style.height = H+'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener('resize', resize); resize();
+  function add(p){ p.t = 0; p.rot = p.rot || 0; p.vr = p.vr || 0; p.g = p.g == null ? 0 : p.g; p.fadeFrom = p.fadeFrom == null ? .7 : p.fadeFrom; ps.push(p); if (!raf){ last = performance.now(); raf = requestAnimationFrame(tick); } }
+  function starPath(R){ ctx.beginPath(); for (let i = 0; i < 10; i++){ const r = i%2 ? R*.42 : R; const a = -Math.PI/2 + i*Math.PI/5; ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r); } ctx.closePath(); }
+  function draw(p){
+    const f = p.fadeFrom, a = p.t < p.ttl*f ? 1 : Math.max(0, 1 - (p.t - p.ttl*f) / (p.ttl*(1-f) || 1));
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y);
+    if (p.shape === 'spark'){
+      ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-p.vx*.035, -p.vy*.035); ctx.stroke();
+    } else if (p.shape === 'rocket'){
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 22); ctx.stroke();
+    } else {
+      ctx.rotate(p.rot); ctx.fillStyle = p.color;
+      if (p.shape === 'star'){ starPath(p.size/2); ctx.fill(); if (p.stroke){ ctx.strokeStyle = p.stroke; ctx.lineWidth = 1; ctx.stroke(); } }
+      else if (p.shape === 'rect'){ ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); }
+      else { ctx.beginPath(); ctx.arc(0, 0, p.size/2, 0, Math.PI*2); ctx.fill(); }
+    }
+    ctx.restore();
+  }
+  function tick(now){
+    const dt = Math.min(.05, (now - last)/1000); last = now;
+    ctx.clearRect(0, 0, W, H);
+    ps = ps.filter(p => {
+      p.t += dt; if (p.t >= p.ttl) return false;
+      if (p.update) p.update(p, dt);
+      p.vy += p.g*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.rot += p.vr*dt;
+      if (p.y > H + 40) return false;
+      draw(p); return true;
+    });
+    if (ps.length) raf = requestAnimationFrame(tick); else { raf = 0; ctx.clearRect(0, 0, W, H); }
+  }
+  const rnd = (a, b) => a + Math.random()*(b-a);
+  const colors = () => { const t = theme(cur()); return { accent:t.accent, dark:t.accentDark }; };
+  return {
+    /* 蓋章：24 顆星 + 12 顆圓點，從印章中心往上噴 */
+    burst(x, y, goldOnly){
+      if (reduceMotion()) return;
+      const c = colors();
+      for (let i = 0; i < 24; i++){ const a = -Math.PI/2 + rnd(-1.75, 1.75), v = rnd(300, 600);
+        add({ shape:'star', x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, g:900, size:rnd(12, 20), color:goldOnly ? '#F5C542' : c.accent, stroke:goldOnly ? '#C98A1B' : c.dark, rot:rnd(0, 6.28), vr:rnd(-6.28, 6.28), ttl:.9, fadeFrom:.66 }); }
+      for (let i = 0; i < 12; i++){ const a = -Math.PI/2 + rnd(-1.75, 1.75), v = rnd(250, 550);
+        add({ shape:'dot', x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, g:900, size:rnd(4, 7), color: goldOnly ? '#FFF3C4' : (i%2 ? '#fff' : c.accent), ttl:.9, fadeFrom:.66 }); }
+    },
+    /* 小慶祝：80 片紙花從左右上角斜噴進來 */
+    confettiSides(n){
+      if (reduceMotion()) return;
+      const c = colors(); const pal = [c.accent, c.dark, '#FFFFFF', '#E2B14A'];
+      for (let i = 0; i < n; i++){
+        const left = i%2 === 0; const a = left ? rnd(.52, 1.05) : Math.PI - rnd(.52, 1.05); const v = rnd(250, 450);
+        add({ shape:'rect', x:left ? 0 : W, y:0, vx:Math.cos(a)*v, vy:Math.sin(a)*v, g:400, w:6, h:10, color:pal[i%4], rot:rnd(0, 6.28), vr:rnd(-3.14, 3.14), ttl:2.2, fadeFrom:.82,
+          phase:rnd(0, 6.28), update:(p, dt) => { p.x += Math.sin(p.t*3 + p.phase)*40*dt; } });
+      }
+    },
+    /* 大慶祝：紙花從整條上緣灑下（每片各自延遲入場，才會像一直灑而不是一次噴完） */
+    confettiRain(n, dur){
+      if (reduceMotion()) return;
+      const c = colors(); const pal = [c.accent, '#F5C542', '#FFFFFF', '#E2B14A'];
+      for (let i = 0; i < n; i++){
+        const delay = rnd(0, dur);
+        add({ shape:'rect', x:-100, y:-12, vx:0, vy:0, g:0, w:6, h:10, color:pal[i%4], rot:rnd(0, 6.28), vr:rnd(-3.14, 3.14), ttl:3 + delay, fadeFrom:.85,
+          phase:rnd(0, 6.28), delay, spawned:false,
+          update:(p, dt) => {
+            /* 用旗標判斷有沒有入場過；不能拿 vy===0 當旗標，
+               因為 tick 每一幀都會把重力加到 vy 上，第二幀就不是 0 了 */
+            if (p.t < p.delay){ p.x = -100; p.y = -12; p.vx = 0; p.vy = 0; p.g = 0; return; }
+            if (!p.spawned){ p.spawned = true; p.x = rnd(0, W); p.y = -12; p.vx = rnd(-30, 30); p.vy = rnd(150, 300); p.g = 60; }
+            p.x += Math.sin(p.t*3 + p.phase)*40*dt;
+          } });
+      }
+    },
+    /* 煙火：一條火箭上升，到點炸開 60 顆 */
+    firework(xr, mainColor){
+      if (reduceMotion()) return;
+      const c = colors(); const x = W*xr, y0 = H, y1 = H*rnd(.25, .35), RISE = .5;
+      /* ttl 要比上升時間長一點：tick 是「先加 t、超過 ttl 就移除」，
+         若 ttl 正好等於上升時間，粒子會在到達頂點的那一幀被丟掉，永遠炸不開 */
+      add({ shape:'rocket', x, y:y0, vx:0, vy:0, g:0, color:mainColor, ttl:RISE + .06, fadeFrom:1,
+        update:(p, dt) => {
+          const k = Math.min(1, p.t/RISE); const e = 1 - Math.pow(1-k, 3);
+          p.y = y0 + (y1 - y0)*e; p.vy = 0;
+          if (k >= 1 && !p.done){
+            p.done = true;
+            for (let i = 0; i < 60; i++){ const a = rnd(0, 6.28), v = rnd(200, 400);
+              add({ shape:'spark', x:p.x, y:p.y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, g:300, color:[mainColor, '#fff', c.accent][i%3], ttl:1.2, fadeFrom:.3 }); }
+          }
+        } });
+    },
+  };
+})();
+
+/* ───────── 音效（全部 WebAudio 合成；第一次使用者手勢時才建立） ───────── */
+const SFX = (() => {
+  let ctx = null, master = null;
+  function ensure(){
+    try {
+      if (!ctx){ const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC(); master = ctx.createGain(); master.gain.value = .3; master.connect(ctx.destination); }
+      /* 不能只看 'suspended'：iOS 進背景、接電話或 Siri 之後狀態會變成 'interrupted'，
+         那時不 resume 的話，之後所有音效都會照跑但完全沒聲音 */
+      if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    } catch (e) {}
+  }
+  const on = () => !!(ctx && state && state.settings.sound);
+  function tone(freq, t0, dur, type, vol){
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol == null ? .5 : vol, t0 + .005); g.gain.exponentialRampToValueAtTime(.001, t0 + dur);
+    o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + .02);
+  }
+  function noise(t0, dur, ft, freq, vol){
+    const len = Math.max(1, Math.ceil(ctx.sampleRate*dur)); const buf = ctx.createBuffer(1, len, ctx.sampleRate); const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random()*2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf; const f = ctx.createBiquadFilter(); f.type = ft; f.frequency.value = freq; f.Q.value = 1;
+    const g = ctx.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master); src.start(t0); src.stop(t0 + dur);
+  }
+  const N = { C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392, A4:440, B4:493.88, C5:523.25, E5:659.25, G5:783.99, C6:1046.5, E6:1318.5, G6:1568 };
+  return {
+    ensure,
+    pop(){ if (!on()) return; const t = ctx.currentTime; noise(t, .06, 'bandpass', 1200, .8); tone(120, t, .08, 'sine', .9); },
+    chime(){ if (!on()) return; const t = ctx.currentTime; [N.C5, N.E5, N.G5].forEach((f, i) => { tone(f, t + i*.09, .28, 'sine', .45); tone(f, t + i*.09, .22, 'triangle', .2); }); },
+    ten(){ if (!on()) return; const t = ctx.currentTime; [N.C5, N.E5, N.G5, N.C6, N.E6].forEach((f, i) => tone(f, t + i*.11, .3, 'sine', .45)); [N.C6, N.E6, N.G6].forEach(f => { tone(f, t + .55, .5, 'sine', .3); tone(f, t + .55, .45, 'triangle', .12); }); },
+    hundred(){ if (!on()) return; const t = ctx.currentTime; [N.C4, N.D4, N.E4, N.F4, N.G4, N.A4, N.B4, N.C5].forEach((f, i) => tone(f, t + i*.09, .3, 'sine', .45)); },
+    boom(){ if (!on()) return; const t = ctx.currentTime; noise(t, .25, 'lowpass', 400, 1); tone(80, t, .25, 'sine', 1); },
+    minus(){ if (!on()) return; const t = ctx.currentTime; tone(N.G4, t, .15, 'sine', .22); tone(N.E4, t + .15, .18, 'sine', .22); },
+    tick(){ if (!on()) return; const t = ctx.currentTime; noise(t, .02, 'highpass', 2000, .3); },
+  };
+})();
+/* iOS 只把 pointerup / touchend / click 算成「使用者手勢」，三個都掛，順手就好 */
+['pointerdown','pointerup','touchend','click'].forEach(t => document.addEventListener(t, () => SFX.ensure(), { capture:true, passive:true }));
+
+/* ───────── toast ───────── */
+let toastTimer = 0, toastAction = null;
+function toast(msg, opt){
+  opt = opt || {};
+  $('toastTx').textContent = msg;
+  const b = $('toastBtn');
+  if (opt.action){ b.textContent = opt.action; b.classList.remove('hide'); toastAction = opt.onAction; }
+  else { b.classList.add('hide'); toastAction = null; }
+  const el = $('toast'); el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), opt.ms || 2500);
+}
+/* 先把 toast 收掉再執行動作：不然動作裡新跳的「已復原」會被這一行立刻關掉 */
+$('toastBtn').onclick = () => {
+  const fn = toastAction; toastAction = null;
+  clearTimeout(toastTimer); $('toast').classList.remove('on');
+  if (fn) fn();
+};
+
+/* ───────── sheet 共用 ───────── */
+let openSheetId = null;
+function openSheet(id){
+  if (openSheetId && openSheetId !== id) $(openSheetId).classList.remove('open');
+  openSheetId = id; $('scrim').classList.add('on'); $(id).classList.add('open');
+  hideReasonPanel();
+}
+function closeSheet(){
+  if (!openSheetId) return;
+  $(openSheetId).classList.remove('open'); $('scrim').classList.remove('on'); openSheetId = null;
+}
+$('scrim').onclick = closeSheet;
+/* 拖把往下拉 > 80px 關閉 */
+document.querySelectorAll('.sheet .hd').forEach(hd => {
+  let y0 = 0, dy = 0, sheet = hd.parentElement;
+  hd.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; dy = 0; sheet.classList.add('drag'); }, { passive:true });
+  hd.addEventListener('touchmove', e => { dy = Math.max(0, e.touches[0].clientY - y0); sheet.style.transform = `translateY(${dy}px)`; }, { passive:true });
+  hd.addEventListener('touchend', () => { sheet.classList.remove('drag'); sheet.style.transform = ''; if (dy > 80) closeSheet(); }, { passive:true });
+  /* 拖到一半被來電或系統手勢打斷時會收到 touchcancel，沒接的話 sheet 會卡在半空 */
+  hd.addEventListener('touchcancel', () => { sheet.classList.remove('drag'); sheet.style.transform = ''; dy = 0; }, { passive:true });
+});
+
+/* ───────── chips 元件：回傳 {el, value()} ───────── */
+function chipPicker(list, opt){
+  opt = opt || {};
+  let value = '';
+  const wrap = h('div');
+  const chips = h('div', { class:'chips' + (opt.row ? ' row' : '') });
+  const custom = h('div', { class:'inrow hide' });
+  const input = h('input', { placeholder: opt.placeholder || '他做了什麼？', maxlength:'40', enterkeyhint:'done' });
+  const saveBtn = h('button', { text:'儲存', onclick: () => { value = input.value.trim(); if (opt.onPick) opt.onPick(value, true); } });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); saveBtn.click(); } });
+  custom.append(input, saveBtn);
+  function setOn(btn){ chips.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); }); if (btn){ btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); } }
+  for (const r of list){
+    const c = h('button', { class:'chip' + (opt.grey ? ' grey' : ''), text:r, 'aria-pressed':'false', onclick: () => {
+      if (c.classList.contains('on')){ setOn(null); value = ''; custom.classList.add('hide'); if (opt.onPick) opt.onPick('', false); return; }
+      setOn(c); value = r; custom.classList.add('hide'); if (opt.onPick) opt.onPick(r, false);
+    } });
+    chips.append(c);
+  }
+  const other = h('button', { class:'chip' + (opt.grey ? ' grey' : ''), text:'其他…', onclick: () => { setOn(other); value = ''; custom.classList.remove('hide'); input.focus(); if (opt.onOther) opt.onOther(); } });
+  chips.append(other);
+  wrap.append(chips, custom);
+  return { el:wrap, value: () => (custom.classList.contains('hide') ? value : input.value.trim()), input };
+}
+
+/* ───────── 蓋章（資料） ─────────
+   先寫入再播動畫。回傳的是一張「動畫工單」而不是事件本身：
+   quick / net 這些只給動畫用的欄位不能混進 state.events，否則會被存進備份 JSON。
+   net 是「這一筆落下的當下」的淨值 —— 家長連按兩下時，兩筆都已寫入，
+   等動畫播到第二顆才去算 netOf 就會跳過中間的第 10 顆。 */
+function addStamp(kidId, date, reason, quick){
+  const ev = { id:newId(), kid:kidId, type:'plus', date, ts:Date.now(), reason:reason || '' };
+  state.events.push(ev);
+  if (reason) rememberReason(kidById(kidId), reason);
+  save();
+  return { id:ev.id, kid:kidId, date, quick:!!quick, net:netOf(kidId) };
+}
+function removeEvent(id){
+  const i = state.events.findIndex(e => e.id === id);
+  if (i < 0) return false;
+  state.events.splice(i, 1); save(); return true;
+}
+
+/* ───────── 蓋章動畫（1250ms）＋佇列 ───────── */
+const Q = []; let playing = false; let lastQuick = null;
+function enqueue(job){ Q.push(job); if (!playing) runQueue(); }
+async function runQueue(){
+  playing = true; let n = 0;
+  try {
+    while (Q.length){
+      const job = Q.shift();
+      /* 每一顆各自包起來：中間一顆的動畫掛掉，不能讓後面排隊的整批消失，
+         也不能因此漏掉里程碑判定（那是資料，不是特效） */
+      try { await playStamp(job, { fast: n > 0 }); }
+      catch (err) { land(job); $('stampLayer').classList.remove('on'); }
+      n++;
+      const kid = kidById(job.kid);
+      const m = kid ? milestoneFor(kid, job.net) : null;
+      if (m){
+        kid.celebrated.push(job.net); save();       /* 先記再播：播到一半關掉 app 也不會重播 */
+        try {
+          if (m === 'big') await celebrateHundred(kid, job.net);
+          else await celebrateTen(kid, job.net);
+        } catch (err) { $('big').classList.remove('on'); $('banner').style.transform = 'translateY(-120%)'; }
+      }
+      if (job.quick) lastQuick = job;
+    }
+  } finally {
+    playing = false;
+    if (lastQuick){ showReasonPanel(lastQuick); lastQuick = null; }
+  }
+}
+function milestoneFor(kid, T){
+  if (T <= 0 || kid.celebrated.includes(T)) return null;
+  if (T % 100 === 0) return 'big';
+  if (T % 10 === 0) return 'small';
+  return null;
+}
+function targetPoint(ev){
+  const cell = ev.kid === state.lastKid ? $('grid').querySelector(`[data-date="${ev.date}"]`) : null;
+  const el = cell || $('heroNum');
+  const r = el.getBoundingClientRect();
+  return { x:r.left + r.width/2, y:r.top + r.height/2, cell:!!cell };
+}
+async function playStamp(ev, opt){
+  const layer = $('stampLayer'), st = $('stampEl'), fl = $('flash'), tx = $('stampTxt'), app = $('app');
+  const W = innerWidth, H = innerHeight, cx = W/2, cy = H*.42;
+  const base = `translate(${cx-70}px,${cy-70}px)`;
+  st.className = 'stamp'; st.style.opacity = '0'; st.style.transform = base; tx.style.opacity = '0'; fl.style.opacity = '0';
+  tx.style.left = cx + 'px'; tx.style.top = (cy + 70 + 20) + 'px'; tx.style.transform = 'translate(-50%,0) scale(1)';
+  layer.classList.add('on');
+  if (reduceMotion()){
+    await anim(st, [{ opacity:0 }, { opacity:1 }], 200);
+    SFX.pop(); SFX.chime();
+    tx.style.opacity = '1';
+    await wait(500);
+    land(ev); st.style.opacity = '0'; tx.style.opacity = '0';
+    await wait(100); layer.classList.remove('on'); return;
+  }
+  /* 0–180ms 印章落下 */
+  await anim(st, [{ transform:`translate(${cx-70}px,${cy-130}px) scale(1.6)`, opacity:0 }, { transform:`${base} scale(1)`, opacity:1 }], { duration: opt.fast ? 100 : 180, easing:'cubic-bezier(.5,0,1,.6)' });
+  /* 180–280ms 落地擠壓 + 閃光 + 粒子 + 啪 */
+  SFX.pop();
+  fl.style.transform = `translate(${cx-100}px,${cy-100}px) scale(.2)`;
+  anim(fl, [{ transform:`translate(${cx-100}px,${cy-100}px) scale(.2)`, opacity:.35 }, { transform:`translate(${cx-100}px,${cy-100}px) scale(2.6)`, opacity:0 }], 280);
+  anim(app, [{ transform:'translateY(2px)' }, { transform:'none' }], 80);
+  FX.burst(cx, cy);
+  await anim(st, [{ transform:`${base} scale(1)` }, { transform:`${base} scale(.9)`, offset:.43 }, { transform:`${base} scale(1.06)`, offset:.71 }, { transform:`${base} scale(1)` }], 140);
+  /* 260ms 「你好棒！」彈出 + 三連音 */
+  SFX.chime();
+  anim(tx, [{ transform:'translate(-50%,0) scale(.5)', opacity:0 }, { transform:'translate(-50%,0) scale(1.1)', opacity:1, offset:.7 }, { transform:'translate(-50%,0) scale(1)', opacity:1 }], { duration:220, easing:'cubic-bezier(.34,1.56,.64,1)' });
+  await wait(380);
+  /* 700–1100ms 飛回格子 */
+  const t = targetPoint(ev);
+  anim(tx, [{ opacity:1 }, { opacity:0 }], 200);
+  await anim(st, [{ transform:`${base} scale(1)` }, { transform:`translate(${t.x-70}px,${t.y-70}px) scale(.22)` }], { duration:380, easing:'cubic-bezier(.4,0,.2,1)' });
+  st.style.opacity = '0';
+  /* 1100–1250ms 落格 */
+  land(ev);
+  await wait(150);
+  layer.classList.remove('on');
+}
+/* 動畫落地：重畫格子、新那顆星 pop、總數 bump、進度點 pop */
+function land(ev){
+  renderAll();
+  if (ev.kid !== state.lastKid) return;
+  const cell = $('grid').querySelector(`[data-date="${ev.date}"]`);
+  if (cell){
+    const stars = cell.querySelectorAll('svg.s'); const s = stars[stars.length-1];
+    if (s) s.classList.add('pop');
+    cell.classList.add('flash'); setTimeout(() => cell.classList.remove('flash'), 250);
+  }
+  anim($('heroNum'), [{ transform:'scale(1.25)' }, { transform:'scale(1)' }], 200);
+  const n = netOf(ev.kid); const d = $('dots').children[(n-1+10) % 10];
+  if (d && n % 10 !== 0) anim(d, [{ transform:'scale(0)' }, { transform:'scale(1.4)', offset:.6 }, { transform:'scale(1)' }], 200);
+}
+
+/* ───────── 小慶祝（滿 10） ───────── */
+function tapToSkip(ms){
+  return new Promise(res => {
+    let done = false; const fin = () => { if (done) return; done = true; document.removeEventListener('pointerdown', fin, true); res(); };
+    setTimeout(fin, ms); setTimeout(() => document.addEventListener('pointerdown', fin, true), 300);
+  });
+}
+async function celebrateTen(kid, T){
+  hideReasonPanel();
+  const b = $('banner');
+  $('bannerT1').textContent = `第 ${T} 顆星星！`;
+  $('bannerT2').textContent = pick(COPY_TEN);
+  SFX.ten(); FX.confettiSides(80);
+  anim(b, [{ transform:'translateY(-120%)' }, { transform:'translateY(0)' }], { duration:300, easing:'cubic-bezier(.34,1.56,.64,1)' });
+  anim($('heroNum'), [{ transform:'scale(1)' }, { transform:'scale(1.6)', offset:.5 }, { transform:'scale(1.6)', offset:.75 }, { transform:'scale(1)' }], { duration:600, easing:'cubic-bezier(.34,1.56,.64,1)' });
+  const dots = $('dots');
+  await wait(150);
+  dots.querySelectorAll('i').forEach(i => i.classList.add('on'));
+  await wait(300);
+  dots.querySelectorAll('i').forEach(i => i.classList.remove('on'));
+  await tapToSkip(1550);
+  await anim(b, [{ transform:'translateY(0)' }, { transform:'translateY(-120%)' }], 200);
+}
+
+/* ───────── 大慶祝（滿 100） ───────── */
+async function celebrateHundred(kid, T){
+  closeSheet();                                   /* 動畫飛的那一秒家長順手開了紀錄頁，也不能擋住這一刻 */
+  hideReasonPanel();
+  const big = $('big'), star = $('bigStar'), halo = $('bigHalo'), take = $('bigTake'), skip = $('bigSkip');
+  const d = new Date();
+  $('bigWho').textContent = `${kid.name}・${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日`;
+  $('bigH1').textContent = `${T} 顆星星！`;
+  $('bigH2').textContent = pick(COPY_HUNDRED).replace('〔名字〕', kid.name).replace('〔數字〕', T);
+  $('bigH1').style.opacity = '0'; $('bigH2').style.opacity = '0'; take.classList.remove('on'); skip.classList.remove('on');
+  star.style.opacity = '0'; halo.style.opacity = '0';
+  big.classList.add('on'); void big.offsetWidth; big.style.opacity = '1';
+
+  let closed = false, finish = null;
+  const done = new Promise(res => { finish = res; });
+  const close = async withGold => {
+    if (closed) return; closed = true;
+    if (withGold){
+      const r = take.getBoundingClientRect(); FX.burst(r.left + r.width/2, r.top + r.height/2, true);
+      state.events.push({ id:newId(), kid:kid.id, type:'gold', date:todayKey(), ts:Date.now(), reason:'', n:T }); save();
+      await wait(350);
+    }
+    big.style.opacity = '0'; await wait(300); big.classList.remove('on');
+    renderAll();
+    toast(`${T} 顆了，要不要到設定頁備份一下？`, { ms:5000, action:'去備份', onAction: openSettings });
+    finish();
+  };
+  take.onclick = () => close(true);
+  skip.onclick = () => close(false);
+
+  try {
+    SFX.hundred();
+    anim(halo, [{ transform:'scale(.5)', opacity:.5 }, { transform:'scale(2)', opacity:0 }], 400);
+    await anim(star, [{ transform:'scale(0) rotate(-180deg)', opacity:0 }, { transform:'scale(1.2) rotate(0deg)', opacity:1, offset:.7 }, { transform:'scale(1) rotate(0deg)', opacity:1 }], { duration:400, easing:'cubic-bezier(.34,1.56,.64,1)' });
+    FX.firework(.25, '#F5C542'); SFX.boom();
+    FX.confettiRain(200, 3);
+    setTimeout(() => { if (!closed){ FX.firework(.5, theme(kid).accent); SFX.boom(); } }, 500);
+    setTimeout(() => { if (!closed){ FX.firework(.75, '#FFFFFF'); SFX.boom(); } }, 1000);
+    await wait(200);
+    anim($('bigH1'), [{ transform:'scale(.6)', opacity:0 }, { transform:'scale(1)', opacity:1 }], { duration:220, easing:'cubic-bezier(.34,1.56,.64,1)' });
+    await wait(150);
+    anim($('bigH2'), [{ opacity:0 }, { opacity:1 }], 300);
+    await wait(250);
+  } catch (err) { /* 特效壞掉不能讓「收下」永遠出不來 */ }
+  take.classList.add('on');
+  try { take.focus({ preventScroll:true }); } catch (err) {}
+  setTimeout(() => { if (!closed) skip.classList.add('on'); }, 3000);
+  await done;
+}
+
+/* ───────── 原因面板（快速蓋章後） ───────── */
+let rpTimer = 0, rpEvent = null;
+function showReasonPanel(ev){
+  rpEvent = ev;
+  const kid = kidById(ev.kid);
+  const chips = $('rpChips'); chips.textContent = '';
+  $('rpCustom').classList.add('hide'); $('rpInput').value = '';
+  const armTimer = () => { clearTimeout(rpTimer); rpTimer = setTimeout(hideReasonPanel, 6000); };
+  for (const r of reasonChipsFor(kid)){
+    chips.append(h('button', { class:'chip', text:r, onclick: e => { e.currentTarget.classList.add('on'); setReason(ev, r); setTimeout(hideReasonPanel, 120); toast('⭐ ' + r, { ms:1200 }); } }));
+  }
+  chips.append(h('button', { class:'chip', text:'其他…', onclick: () => { $('rpCustom').classList.remove('hide'); $('rpInput').focus(); clearTimeout(rpTimer); } }));
+  $('reasonPanel').classList.add('on');
+  armTimer();
+}
+function hideReasonPanel(){ clearTimeout(rpTimer); $('reasonPanel').classList.remove('on'); $('rpInput').blur(); }
+function setReason(ev, r){
+  const e = state.events.find(x => x.id === ev.id); if (!e) return;
+  e.reason = r; rememberReason(kidById(e.kid), r); save();
+}
+$('rpSave').onclick = () => { const r = $('rpInput').value.trim(); if (rpEvent && r){ setReason(rpEvent, r); toast('⭐ ' + r, { ms:1200 }); } hideReasonPanel(); };
+$('rpInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('rpSave').click(); } });
+$('rpUndo').onclick = () => {
+  if (rpEvent && removeEvent(rpEvent.id)){
+    /* 撤銷的語意是「這一顆從來沒發生」：如果它剛好觸發了慶祝，
+       慶祝紀錄與那天的紀念章也要一起收回，孩子真的做到第 100 件事時才會再放一次煙火 */
+    const kid = kidById(rpEvent.kid);
+    if (kid && rpEvent.net && kid.celebrated[kid.celebrated.length - 1] === rpEvent.net){
+      kid.celebrated.pop();
+      const gi = state.events.findIndex(e => e.type === 'gold' && e.kid === kid.id && e.n === rpEvent.net);
+      if (gi >= 0) state.events.splice(gi, 1);
+    }
+    save(); renderAll(); toast('已撤銷');
+  }
+  hideReasonPanel();
+};
+document.addEventListener('pointerdown', e => {
+  if ($('reasonPanel').classList.contains('on') && !$('reasonPanel').contains(e.target)) hideReasonPanel();
+}, true);
+
+/* ───────── 主按鈕：今天好棒！ ───────── */
+$('bigBtn').onclick = () => {
+  SFX.ensure();
+  const job = addStamp(state.lastKid, todayKey(), '', true);
+  const now = new Date();
+  if (view.y !== now.getFullYear() || view.m !== now.getMonth()){ view = { y:now.getFullYear(), m:now.getMonth() }; renderCalendar(); }
+  enqueue(job);
+};
+$('editBtn').onclick = () => openDay(todayKey());
+$('hero').onclick = openRecords;
+
+/* ───────── 日期 sheet（路徑 B） ───────── */
+function openDay(key){
+  const kid = cur(); const d = parseKey(key);
+  const bd = $('dayBd'); bd.textContent = '';
+  const evs = eventsOf(kid.id).filter(e => e.date === key).sort((a, b) => a.ts - b.ts);
+  const plus = evs.filter(e => e.type==='plus').length, minus = evs.filter(e => e.type==='minus').length;
+  bd.append(h('h2', { text:`${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）${key === TODAY ? '・今天' : ''}` }));
+  bd.append(h('p', { class:'sub', text: plus || minus ? `${kid.name} 這天 ⭐ ${plus}${minus ? ` ・ 扣 ${minus}` : ''}` : `${kid.name} 這天還沒有蓋章` }));
+  if (evs.length) bd.append(eventList(evs, () => openDay(key)));
+  bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
+  const picker = chipPicker(reasonChipsFor(kid), { onPick: () => {} });
+  bd.append(picker.el);
+  const btn = h('button', { class:'pbtn', onclick: async () => {
+    const reason = picker.value();
+    const job = addStamp(kid.id, key, reason, false);
+    closeSheet();
+    /* 如果畫面停在別的月份，先翻回這一天所在的月份，
+       不然印章會飛去總數、格子也不會亮，看起來像「章不知道蓋到哪去了」 */
+    const d = parseKey(key);
+    if (d.getFullYear() !== view.y || d.getMonth() !== view.m){
+      view = { y:d.getFullYear(), m:d.getMonth() }; renderCalendar(); renderHero();
+    }
+    await wait(260);                                   /* 等 sheet 收完再量格子座標 */
+    enqueue(job);
+  } }, svgStar(), h('span', { text:'蓋好棒！' }));
+  bd.append(btn);
+  bd.append(h('button', { class:'lnk', text:'在這天扣一顆', onclick: () => openDeduct(key) }));
+  openSheet('daySheet');
+}
+/* 事件清單：時間、圖示、原因（點了可改）、刪除（兩段式） */
+function eventList(evs, refresh){
+  const list = h('div', { class:'list' });
+  for (const e of evs){
+    const tm = new Date(e.ts);
+    const row = h('div', { class:'row' });
+    row.append(h('span', { class:'tm', text: (e.ts && Number.isFinite(tm.getTime())) ? `${pad(tm.getHours())}:${pad(tm.getMinutes())}` : '' }));
+    const ic = h('span', { class:'ic' + (e.type === 'minus' ? ' m' : e.type === 'gold' ? ' g' : '') });
+    if (e.type === 'minus') ic.textContent = '−'; else ic.append(svgStar());
+    row.append(ic);
+    if (e.type === 'gold'){ row.append(h('span', { class:'rs', text:`滿 ${e.n || 100} 顆的紀念章` })); }
+    else {
+      const rs = h('button', { class:'rs' + (e.reason ? '' : ' empty'), text: e.reason || '沒寫原因，點一下補', onclick: () => {
+        const inp = h('input', { value:e.reason, placeholder:'他做了什麼？', maxlength:'40', enterkeyhint:'done' });
+        const sv = h('button', { text:'儲存', onclick: () => { e.reason = inp.value.trim(); rememberReason(kidById(e.kid), e.reason, e.type === 'minus'); save(); refresh(); } });
+        inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); sv.click(); } });
+        const wrap = h('div', { class:'inrow', style:'flex:1;margin:0' }, inp, sv);
+        rs.replaceWith(wrap); inp.focus();
+      } });
+      row.append(rs);
+    }
+    let armed = 0;
+    const del = h('button', { class:'del', text:'刪除', onclick: () => {
+      if (!armed){ armed = 1; del.textContent = '確定刪除'; del.classList.add('arm'); setTimeout(() => { armed = 0; del.textContent = '刪除'; del.classList.remove('arm'); }, 3000); return; }
+      removeEvent(e.id); renderAll(); refresh();
+    } });
+    row.append(del);
+    list.append(row);
+  }
+  return list;
+}
+
+/* ───────── 扣除 sheet（長按 600ms） ───────── */
+function openDeduct(key){
+  const kid = cur(); const bd = $('deductBd'); bd.textContent = '';
+  const n = netOf(kid.id);
+  const d = parseKey(key); const isToday = key === TODAY;
+  bd.append(h('h2', { text:`要扣掉 ${kid.name} 的一顆星星嗎？` + (isToday ? '' : `（${d.getMonth()+1} 月 ${d.getDate()} 日）`) }));
+  const tipsBefore = TIPS.filter(t => t[0] === '扣之前');
+  bd.append(h('p', { class:'sub', text: pick(tipsBefore)[1] }));
+  if (eventsOf(kid.id).some(e => e.type === 'minus' && e.date === key)) bd.append(h('p', { class:'sub warn', text:'這天已經扣過一顆了。再扣之前，先想想他知不知道是哪件事。' }));
+  if (n === 0){
+    bd.append(h('p', { class:'sub', text:`${kid.name} 現在是 0 顆，沒有可以扣的星星。` }));
+    bd.append(h('button', { class:'pbtn', text:'知道了', onclick: closeSheet }));
+    openSheet('deductSheet'); return;
+  }
+  bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
+  const picker = chipPicker(reasonPool(true), { grey:true, placeholder:'發生了什麼事？' });
+  bd.append(picker.el);
+  const hold = h('button', { class:'hold' }, h('div', { class:'fill' }), h('span', { text:'按住不放才會扣' }));
+  let timer = 0, pid = null;
+  const reset = () => { clearTimeout(timer); timer = 0; hold.classList.remove('holding'); pid = null; };
+  hold.addEventListener('pointerdown', e => {
+    if (timer) return; pid = e.pointerId; hold.classList.add('holding');
+    timer = setTimeout(() => {
+      reset();
+      const reason = picker.value();
+      state.events.push({ id:newId(), kid:kid.id, type:'minus', date:key, ts:Date.now(), reason });
+      rememberReason(kid, reason, true); save();
+      closeSheet();
+      deductFeedback(kid.id, key);
+    }, 600);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t => hold.addEventListener(t, e => { if (pid !== null && e.pointerId === pid) reset(); }));
+  /* 觸控會隱含 pointer capture，手指滑出按鈕不會發 pointerleave；
+     沒有這一段的話，「按下去又改變主意滑開」還是照扣。 */
+  hold.addEventListener('pointermove', e => {
+    if (pid === null || e.pointerId !== pid) return;
+    const r = hold.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) reset();
+  });
+  hold.addEventListener('contextmenu', e => e.preventDefault());
+  bd.append(hold);
+  bd.append(h('button', { class:'lnk', text:'取消', onclick: closeSheet, style:'margin:4px auto 0' }));
+  openSheet('deductSheet');
+}
+function deductFeedback(kidId, key){
+  const old = $('heroNum').textContent;
+  renderAll();
+  const cell = $('grid').querySelector(`[data-date="${key}"] .m`); if (cell) cell.classList.add('fade');
+  const num = $('heroNum'); if (num.textContent !== old) anim(num, [{ opacity:0 }, { opacity:1 }], 300);
+  SFX.minus();
+  const last = state.events[state.events.length-1];
+  setTimeout(() => toast('已扣一顆。記得把原因說給孩子聽。', { ms:4000, action:'復原', onAction: () => { if (removeEvent(last.id)){ renderAll(); toast('已復原'); } } }), 400);
+}
+$('minusBtn').onclick = () => {
+  if (netOf(state.lastKid) === 0){ toast('目前沒有可以扣的星星', { ms:1500 }); return; }
+  openDeduct(todayKey());
+};
+
+/* ───────── 紀錄頁 ─────────
+   一次只畫 40 天，其餘按「載入更早的」再補：
+   累積兩三年之後一口氣建幾千列，iPhone 會整個卡住。 */
+let recordsDays = 40;
+function openRecords(keepPage){
+  if (!keepPage) recordsDays = 40;
+  const kid = cur(); const bd = $('recordsBd'); bd.textContent = '';
+  const evs = eventsOf(kid.id).slice().sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts);
+  const plus = evs.filter(e => e.type==='plus').length, minus = evs.filter(e => e.type==='minus').length;
+  bd.append(h('h2', { text:`${kid.emoji} ${kid.name} 的紀錄` }));
+  bd.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}。點原因可以補寫或修改。` : '還沒有任何紀錄。今天找一件他做到的小事吧。' }));
+  const groups = {};
+  for (const e of evs){ (groups[e.date] = groups[e.date] || []).push(e); }
+  const dates = Object.keys(groups);
+  const shown = dates.slice(0, recordsDays);
+  for (const date of shown){
+    const d = parseKey(date);
+    bd.append(h('div', { class:'dgrp', text:`${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）` }));
+    bd.append(eventList(groups[date].sort((a, b) => a.ts - b.ts), () => openRecords(true)));
+  }
+  if (dates.length > shown.length){
+    bd.append(h('button', { class:'sbtn', style:'width:100%;margin-top:16px',
+      text:`載入更早的紀錄（還有 ${dates.length - shown.length} 天）`,
+      onclick: () => { recordsDays += 60; openRecords(true); } }));
+  }
+  openSheet('recordsSheet');
+}
+
+/* ───────── 設定頁 ───────── */
+function openSettings(){
+  const bd = $('settingsBd'); bd.textContent = '';
+  bd.append(h('h2', { text:'設定' }));
+  bd.append(h('div', { class:'sec', text:'三個孩子（名字、頭像、顏色）' }));
+  for (const k of state.kids){
+    const t = theme(k);
+    const card = h('div', { class:'kcard' });
+    const ava = h('div', { class:'ava', text:k.emoji, style:`--k-bg:${t.bg};--k-accent:${t.accent}` });
+    const inp = h('input', { value:k.name, maxlength:'12', placeholder:'名字', enterkeyhint:'done' });
+    inp.addEventListener('input', () => { k.name = inp.value.trim().slice(0, 12) || k.name; save(); renderKids(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
+    card.append(h('div', { class:'top' }, ava, inp));
+    const emos = h('div', { class:'emos' });
+    for (const e of EMOJIS) emos.append(h('button', { class: e === k.emoji ? 'on' : '', text:e, 'aria-label':'頭像 ' + e, onclick: () => { k.emoji = e; save(); ava.textContent = e; emos.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent === e)); renderKids(); } }));
+    card.append(emos);
+    const sw = h('div', { class:'sw' });
+    THEMES.forEach((th, i) => sw.append(h('button', {
+      class: 'swatch' + (k.theme === i ? ' on' : ''), 'aria-label':th.name, 'aria-pressed': k.theme === i ? 'true' : 'false',
+      title:th.name, style:`--t-bg:${th.bg};--t-accent:${th.accent};--t-dark:${th.accentDark}`, onclick: () => {
+        /* 顏色被別的孩子用走了就互換，三個人永遠是不同顏色（一眼認得出是誰的頁面） */
+        const other = state.kids.find(o => o !== k && o.theme === i);
+        if (other) other.theme = k.theme;
+        k.theme = i; save(); applyTheme(); renderAll(); openSettings();
+      } }, h('i'))));
+    card.append(h('div', { class:'swname', text:t.name }), sw);
+    bd.append(card);
+  }
+  /* ── 常用原因：可以照自己家的說法增刪，內建的也能收起來 ── */
+  const reasonEditor = (title, note, deduct) => {
+    const st = state.settings;
+    const base = deduct ? DEDUCT_REASONS : REASONS;
+    const custom = deduct ? st.customDeductReasons : st.customReasons;
+    const hidden = deduct ? st.hiddenDeductReasons : st.hiddenReasons;
+    bd.append(h('div', { class:'sec', text:title }));
+    bd.append(h('p', { class:'sub', text:note }));
+    const wrap = h('div', { class:'rlist' });
+    const redraw = () => { save(); openSettings(); };
+    for (const r of base){
+      const off = hidden.includes(r);
+      wrap.append(h('button', { class:'rtag' + (off ? ' off' : ''), onclick: () => {
+        if (off) hidden.splice(hidden.indexOf(r), 1); else hidden.push(r);
+        redraw();
+      } }, h('span', { text:r }), h('em', { text: off ? '＋' : '×' })));
+    }
+    for (const r of custom){
+      wrap.append(h('button', { class:'rtag mine', onclick: () => {
+        custom.splice(custom.indexOf(r), 1); redraw();
+      } }, h('span', { text:r }), h('em', { text:'×' })));
+    }
+    bd.append(wrap);
+    const inp = h('input', { placeholder: deduct ? '例如：亂丟弟弟的玩具' : '例如：自己倒水沒灑出來', maxlength:'30', enterkeyhint:'done' });
+    const add = () => {
+      const v = inp.value.trim();
+      if (!v) return;
+      if (base.includes(v) || custom.includes(v)){ toast('這個原因已經在清單裡了', { ms:2000 }); inp.value = ''; return; }
+      if (custom.length >= 40){ toast('自訂原因最多 40 個', { ms:2000 }); return; }
+      custom.push(v); inp.value = ''; redraw();
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); add(); } });
+    bd.append(h('div', { class:'inrow' }, inp, h('button', { text:'加入', onclick: add })));
+  };
+  reasonEditor('蓋章的常用原因', '這些會出現在蓋章後的選項裡。點內建的可以收起來，點自己加的會刪掉；手打過的原因也會自動加進來。', false);
+  reasonEditor('扣除的常用原因', '扣除時用的選項，跟蓋章的分開。', true);
+
+  bd.append(h('div', { class:'sec', text:'音效' }));
+  const tg = h('button', { class:'toggle' + (state.settings.sound ? ' on' : ''), role:'switch', 'aria-checked': state.settings.sound ? 'true' : 'false', 'aria-label':'蓋章與慶祝音效',
+    onclick: () => { state.settings.sound = !state.settings.sound; save(); tg.classList.toggle('on', state.settings.sound); tg.setAttribute('aria-checked', state.settings.sound ? 'true' : 'false'); if (state.settings.sound) SFX.chime(); } });
+  bd.append(h('div', { class:'srow' }, h('div', {}, h('div', { text:'蓋章與慶祝音效' }), h('div', { class:'note', text:'iPhone 側邊靜音鍵開著的時候不會出聲，這是正常的。' })), tg));
+
+  /* ── 自動快照：這是本機的自動備份，救得了誤刪，救不了手機掉了 ── */
+  bd.append(h('div', { class:'sec', text:'自動備份（存在這支手機裡）' }));
+  bd.append(h('p', { class:'sub', text:'每次蓋章或修改，app 都會自動另外存一份完整快照，保留最近 20 份與每天最後一份（60 天）。誤刪、誤扣、資料出問題都可以從這裡救回來。' }));
+  const snapBox = h('div', { class:'snaps' }, h('p', { class:'sub', text:'讀取中…' }));
+  bd.append(snapBox);
+  listSnapshots().then(list => {
+    snapBox.textContent = '';
+    if (!list.length){ snapBox.append(h('p', { class:'sub', text:'還沒有快照（第一次改動後幾秒就會出現）。' })); return; }
+    list.slice(0, 12).forEach(rec => {
+      const d = new Date(rec.ts);
+      const stars = (rec.stars || []).map(s => `${s.emoji}${s.n}`).join(' ');
+      const row = h('div', { class:'snap' });
+      row.append(h('div', {},
+        h('div', { text:`${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}` }),
+        h('div', { class:'note', text:`${stars}　共 ${rec.events} 筆` })));
+      let armed = 0;
+      const btn = h('button', { class:'sbtn', style:'height:40px;font-size:14px', text:'還原', onclick: () => {
+        if (!armed){ armed = 1; btn.textContent = '再按一次'; btn.classList.add('warn', 'fill'); setTimeout(() => { armed = 0; btn.textContent = '還原'; btn.classList.remove('warn', 'fill'); }, 3000); return; }
+        try { state = normalize(JSON.parse(rec.raw)); } catch (e) { toast('這份快照讀不出來'); return; }
+        save(); applyTheme(); renderAll(); closeSheet();
+        toast(`已還原到 ${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())} 的樣子`, { ms:4000 });
+      } });
+      row.append(btn);
+      snapBox.append(row);
+    });
+    if (list.length > 12) snapBox.append(h('p', { class:'sub', style:'margin-top:8px', text:`還有 ${list.length - 12} 份較早的快照。` }));
+  }).catch(() => { snapBox.textContent = ''; snapBox.append(h('p', { class:'sub', text:'這台裝置不支援自動快照，請多用下面的手動備份。' })); });
+
+  bd.append(h('div', { class:'sec', text:'匯出備份（帶得走的那一份）' }));
+  const lb = state.settings.lastBackupAt ? new Date(state.settings.lastBackupAt) : null;
+  const daysAgo = lb ? Math.floor((Date.now() - lb.getTime()) / 864e5) : null;
+  if (daysAgo === null || daysAgo >= 14){
+    bd.append(h('div', { class:'warncard', text: lb
+      ? `已經 ${daysAgo} 天沒有匯出備份了。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。`
+      : '還沒有匯出過備份。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。' }));
+  }
+  bd.append(h('p', { class:'sub', text:`資料只存在這支手機的這個 app 裡，不會上傳到任何地方。換手機、清除網站資料、或把主畫面上的圖示刪掉，紀錄都會跟著不見。${lb ? `上次匯出：${lb.getFullYear()}/${lb.getMonth()+1}/${lb.getDate()}（${daysAgo} 天前）` : ''}` }));
+  const btns = h('div', { class:'btns' });
+  const ta = h('textarea', { class:'bk hide' });
+  const markBacked = () => { state.settings.lastBackupAt = new Date().toISOString(); save(); renderKids(); };
+  btns.append(h('button', { class:'sbtn fill', text:'複製備份文字', onclick: async () => {
+    const json = JSON.stringify(state);
+    let ok = false;
+    try { await navigator.clipboard.writeText(json); ok = true; } catch (e) {}
+    if (ok){ markBacked(); toast('已複製，貼到備忘錄或傳給自己保存', { ms:3000 }); return; }
+    /* 剪貼簿被擋掉時，把文字露出來讓使用者自己複製 —— 但這時候還沒真的備份，不能標記已備份 */
+    ta.classList.remove('hide'); ta.value = json;
+    ta.focus(); try { ta.setSelectionRange(0, ta.value.length); } catch (e) {}
+    toast('請長按下方文字全選後複製', { ms:4000 });
+  } }));
+  /* iOS 主畫面 app 沒有下載管理器，<a download> 常常靜默失敗；
+     分享表才是這裡唯一可靠的出口（存到「檔案」、AirDrop、或傳給自己）。 */
+  btns.append(h('button', { class:'sbtn', text:'傳出備份檔', onclick: async () => {
+    const json = JSON.stringify(state, null, 1);
+    const name = `好棒印章-${todayKey()}.json`;
+    try {
+      const file = new File([json], name, { type:'application/json' });
+      if (navigator.canShare && navigator.canShare({ files:[file] })){
+        await navigator.share({ files:[file], title:'好棒印章備份' });
+        markBacked(); toast('已傳出備份檔', { ms:2500 });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;                 /* 使用者自己取消，不算失敗也不算備份 */
+    }
+    const url = URL.createObjectURL(new Blob([json], { type:'application/json' }));
+    const a = h('a', { href:url, download:name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    /* 這條路不保證真的存到檔案，所以改用問的，家長確認了才算備份過 */
+    toast('檔案有存下來嗎？', { ms:8000, action:'有存到', onAction: () => { markBacked(); toast('好，下次提醒會從今天算起', { ms:2000 }); } });
+  } }));
+  bd.append(btns, ta);
+
+  bd.append(h('div', { class:'sec', text:'還原（會覆蓋目前全部資料）' }));
+  const rta = h('textarea', { class:'bk', placeholder:'把備份文字貼在這裡，或用下面的按鈕選備份檔' });
+  const preview = h('p', { class:'sub hide' });
+  const file = h('input', { type:'file', accept:'.json,application/json', class:'hide' });
+  let pending = null, armed = 0;
+  const confirmBtn = h('button', { class:'sbtn warn', text:'確定覆蓋目前資料', disabled:true, onclick: () => {
+    if (!pending) return;
+    if (!armed){ armed = 1; confirmBtn.textContent = '再按一次就覆蓋'; confirmBtn.classList.add('fill'); setTimeout(() => { armed = 0; confirmBtn.textContent = '確定覆蓋目前資料'; confirmBtn.classList.remove('fill'); }, 3000); return; }
+    state = normalize(pending); save(); applyTheme(); renderAll(); closeSheet(); toast('已還原備份');
+  } });
+  function check(text){
+    pending = null; confirmBtn.disabled = true; preview.classList.remove('hide');
+    try {
+      const raw = JSON.parse(text); const s = normalize(raw);
+      if (!raw || !Array.isArray(raw.kids) || !Array.isArray(raw.events)) throw new Error('format');
+      const lastDate = s.events.map(e => e.date).sort().pop();
+      preview.textContent = `看起來是好棒印章的備份：${s.kids.map(k => k.name).join('、')}，共 ${s.events.length} 筆紀錄${lastDate ? `，最後一筆 ${lastDate}` : ''}。`;
+      pending = raw; confirmBtn.disabled = false;
+    } catch (e) { preview.textContent = '這段文字不是好棒印章的備份格式。'; }
+  }
+  rta.addEventListener('input', () => { if (rta.value.trim()) check(rta.value.trim()); else { preview.classList.add('hide'); pending = null; confirmBtn.disabled = true; } });
+  file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; f.text().then(t => { rta.value = t; check(t); }); });
+  bd.append(rta, h('div', { class:'btns' }, h('button', { class:'sbtn', text:'選備份檔', onclick: () => file.click() }), confirmBtn), preview, file);
+
+  bd.append(h('div', { class:'sec', text:'裝到 iPhone 主畫面' }));
+  bd.append(h('div', { class:'help' }, h('ol', {}, h('li', { text:'用 Safari 打開這個網址' }), h('li', {}, '點下方的 ', h('b', { text:'分享' }), ' 按鈕（方框加向上箭頭）'), h('li', {}, '選 ', h('b', { text:'加入主畫面' }), ' → 右上角「新增」')),
+    h('p', { class:'sub', text:'之後從主畫面圖示打開，會像 app 一樣全螢幕，沒網路也能用。' }),
+    h('p', { class:'sub', text:'注意兩件事：Safari 分頁跟主畫面 app 的資料是分開存的，先加到主畫面再開始蓋章；還有，只在 Safari 分頁裡用的話，一個禮拜沒打開 iPhone 可能會自動清掉，裝到主畫面才會長期保留。' })));
+  bd.append(h('p', { class:'sub', style:'margin-top:16px', text:'好棒印章 v1 ・ 資料不會離開你的手機。' }));
+  openSheet('settingsSheet');
+}
+
+/* ───────── 鍵盤 ─────────
+   iOS 的鍵盤不會把版面推上去，只會縮小可視範圍，
+   所以貼在底部的面板與 sheet 會躲到鍵盤後面。用 visualViewport 自己把它們頂起來。 */
+(() => {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const apply = () => {
+    const lift = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', (lift > 60 ? lift : 0) + 'px');
+  };
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+  apply();
+})();
+
+/* ───────── 非主畫面模式的提示 ───────── */
+(() => {
+  const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('ihClose').onclick = () => { $('installHint').classList.remove('on'); state.settings.hintDismissed = true; save(); };
+  window.__showInstallHint = () => { if (ios && !standalone && !state.settings.hintDismissed) $('installHint').classList.add('on'); };
+})();
+
+/* ───────── Service Worker：離線 + 新版提示 ───────── */
+if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)){
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data && e.data.type === 'shell-updated') toast('有新版本', { ms:8000, action:'更新', onAction: () => location.reload() });
+    });
+  });
+}
+
+/* ───────── 跨日就重畫 ─────────
+   回到前景時檢查一次；app 一直開著（例如放在桌上充電）不會有 visibilitychange，
+   所以再加一個每分鐘的輕量檢查，午夜過後月曆才會把「今天」移到新的一格。 */
+document.addEventListener('visibilitychange', () => { if (!document.hidden && todayKey() !== TODAY) renderAll(); });
+setInterval(() => { if (!document.hidden && todayKey() !== TODAY) renderAll(); }, 60000);
+
+/* ───────── 啟動 ───────── */
+load(); applyTheme(); renderAll(); nextTip(); window.__showInstallHint();
+
+/* 開 app 時提醒備份，但一天最多講一次，不要變成另一種嘮叨 */
+setTimeout(() => {
+  if (!backupOverdue()) return;
+  let nag = null;
+  try { nag = localStorage.getItem(KEY + '.nag'); } catch (e) {}
+  if (nag === todayKey()) return;
+  try { localStorage.setItem(KEY + '.nag', todayKey()); } catch (e) {}
+  toast('好久沒把備份帶出這支手機了', { ms:9000, action:'去備份', onAction: openSettings });
+}, 2500);
+</script>
+</body>
+</html>
