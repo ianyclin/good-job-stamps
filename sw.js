@@ -5,7 +5,7 @@
    集章資料都在 localStorage，不經過這裡。 */
 'use strict';
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const PREFIX = 'good-job-stamps-';
 const CACHE = `${PREFIX}${VERSION}`;
 const SHELL = [

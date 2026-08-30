@@ -227,12 +227,20 @@ svg{display:block}
 }
 #reasonPanel.on{transform:none; visibility:visible}
 #reasonPanel .ttl{font-size:14px; color:var(--dim); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
-#reasonPanel .ttl button{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; min-width:56px; padding:0; margin:-10px 0; text-align:right}
 
 /* ───────── 共用：chips、toast、sheet ───────── */
 .chips{display:flex; flex-wrap:wrap; gap:8px}
 .chips.row{flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; margin:0 -16px; padding-left:16px; padding-right:16px; -webkit-overflow-scrolling:touch; scrollbar-width:none}
 .chips.row::-webkit-scrollbar{display:none}
+/* 原因列右端的「⌄」：展開成多行方便看，再按收回一行；偏好會記住 */
+.chiprow{display:flex; align-items:flex-start}
+.chiprow .chips.row{flex:1; min-width:0; margin-right:0; padding-right:4px}
+.chiprow .chips.row.wrap{flex-wrap:wrap; overflow-x:visible; overflow-y:auto; overscroll-behavior:contain;
+  /* 展開不能無上限長高：原因一多會把面板頂端（含「其他…」與收合鈕）頂出螢幕外，變成點不到 */
+  max-height:max(96px, calc(100vh - var(--kb, 0px) - 380px));
+  max-height:max(96px, calc(100dvh - var(--kb, 0px) - 380px))}
+#rpExpand{flex:0 0 34px; width:34px; height:44px; border:0; background:none; color:var(--dim); font-size:20px; padding:0; transition:transform .2s}
+#rpExpand.up{transform:rotate(180deg)}
 .chip{height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--ink); font-size:16px; white-space:nowrap; flex:0 0 auto; transition:background-color .12s, color .12s}
 .chip.on{background:var(--accent-dark); color:#fff}
 .chip.grey{border-color:var(--grey)}
@@ -315,13 +323,15 @@ svg{display:block}
 .sw .swatch i{width:22px; height:22px; border-radius:50%; background:var(--t-accent); box-shadow:inset 0 -6px 0 var(--t-dark); display:block}
 .sw .swatch.on{border-color:var(--t-dark)}
 .sw .swatch.on::after{content:"✓"; position:absolute; right:-1px; bottom:-1px; width:18px; height:18px; border-radius:50%; background:var(--t-dark); color:#fff; font-size:11px; font-weight:800; display:grid; place-items:center; line-height:1}
-/* 常用原因的可增刪標籤 */
+/* 常用原因的可增刪標籤：≡ 拖動排序、× 收起或刪掉 */
 .rlist{display:flex; flex-wrap:wrap; gap:8px}
-.rtag{display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 10px 0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--ink); font-size:15px}
-.rtag em{font-style:normal; font-size:16px; color:var(--dim); width:22px; height:22px; display:grid; place-items:center; border-radius:50%; background:rgba(0,0,0,.06)}
+.rtag{display:inline-flex; align-items:center; gap:4px; min-height:44px; padding:0 5px 0 8px; border-radius:22px; border:1.5px solid var(--accent-dark); background:var(--card); color:var(--ink); font-size:15px}
+.rtag .grab{font-style:normal; font-size:17px; color:var(--dim); padding:0 4px; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; align-self:stretch; display:grid; place-items:center}
+.rtag.drag{opacity:.55; border-style:dashed}
+.rtag .rx{font-size:16px; color:var(--dim); width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:rgba(0,0,0,.06); border:0; padding:0; flex:0 0 34px}
 .rtag.mine{border-style:dashed}
-.rtag.off{border-color:#D0D0D0; color:#9A9A9A; text-decoration:line-through}
-.rtag.off em{color:var(--accent-dark); background:rgba(var(--accent-rgb),.25); text-decoration:none}
+.rtag.off{border-color:#D0D0D0; color:#9A9A9A; text-decoration:line-through; padding-left:14px}
+.rtag.off .rx{color:var(--accent-dark); background:rgba(var(--accent-rgb),.25); text-decoration:none}
 .srow{display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:15px}
 .srow .note{font-size:13px; color:var(--dim); margin-top:3px; line-height:1.45}
 .toggle{width:52px; height:32px; border-radius:16px; background:#B0B0B0; border:0; position:relative; flex:0 0 52px; transition:background-color .2s; padding:0}
@@ -361,11 +371,17 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
 .ava img.face{width:100%; height:100%; vertical-align:baseline}
 .stamp .semo{position:absolute; left:50%; bottom:9px; transform:translateX(-50%); width:26px; height:26px; border-radius:50%; background-size:cover; background-position:center; font-size:22px; line-height:26px; text-align:center}
 .seeRec{color:var(--accent-dark); font-weight:700}
-.sibs{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap; font-size:15px; color:rgba(var(--ink-rgb),.8)}
-.sibs button{display:inline-flex; align-items:center; gap:4px; height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; font-size:15px; color:var(--ink)}
+/* 「還有誰也做了」固定單行：人多就左右滑，別把面板越撐越高 */
+.sibs{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; margin-left:-16px; margin-right:-16px; padding:0 16px 4px; font-size:15px; color:rgba(var(--ink-rgb),.8)}
+.sibs::-webkit-scrollbar{display:none}
+.sibs span{white-space:nowrap; flex:0 0 auto}
+.sibs button{display:inline-flex; align-items:center; gap:4px; height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; font-size:15px; color:var(--ink); white-space:nowrap; flex:0 0 auto}
 .sibs button.done{background:var(--accent-dark); color:#fff; border-color:var(--accent-dark)}
-.rpfoot{display:flex; margin-top:2px}
-#rpUndo{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; padding:0 4px}
+/* 底部動作列：左＝先跳過／完成（明顯），右＝蓋錯了拿掉（刻意低調，離遠一點防誤按） */
+.rpfoot{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px}
+#rpSkip{height:44px; padding:0 20px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--accent-dark); font-size:16px; font-weight:700; flex:0 0 auto}
+#rpSkip.fill{background:var(--accent-dark); color:#fff}
+#rpUndo{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; padding:0 4px; text-align:right}
 /* 滿 10：十顆星星逐顆點亮清點 */
 #tenlay{position:fixed; inset:0; z-index:66; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .2s}
 #tenlay.on{opacity:1}
@@ -492,11 +508,11 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
 </div>
 
 <div id="reasonPanel" role="region" aria-label="蓋章後的選項">
-  <div class="ttl"><span aria-live="polite">加上原因？（可以不填）</span><button id="rpSkip">先跳過</button></div>
-  <div class="chips row" id="rpChips"></div>
+  <div class="ttl"><span aria-live="polite">加上原因？（可以不填）</span></div>
+  <div class="chiprow"><div class="chips row" id="rpChips"></div><button id="rpExpand" aria-label="展開全部原因">⌄</button></div>
   <div class="inrow hide" id="rpCustom"><input id="rpInput" placeholder="做了什麼？" maxlength="40" enterkeyhint="done"><button id="rpSave">儲存</button></div>
   <div class="sibs hide" id="rpSibs"></div>
-  <div class="rpfoot"><button id="rpUndo">蓋錯了，拿掉這顆</button></div>
+  <div class="rpfoot"><button id="rpSkip">先跳過</button><button id="rpUndo">蓋錯了，拿掉這顆</button></div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"><span id="toastTx"></span><button id="toastBtn" class="hide"></button></div>
@@ -649,14 +665,15 @@ function fresh(){
     version: 1,
     settings: {
       sound:true, lastBackupAt:null, hintDismissed:false,
-      /* 自訂原因全家共用一份，好管理；「最近用過」才是每個孩子各自的 */
+      /* 舊版全家共用的自訂原因（保留給舊備份遷移用）；現在每個孩子各一份 */
       customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[],
+      autoAddTyped:true, recentFirst:false, addToAll:false, reasonWrap:false,
     },
     lastKid: 'k1', tipOrder: [], tipIndex: 0,
     kids: [
       /* 預設兩位；家裡不只兩個就用「＋新增一個孩子」，顏色會自動指派沒人用的主題 */
-      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[] },
-      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[] },
+      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
+      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
     ],
     events: [],
   };
@@ -679,10 +696,15 @@ function normalize(raw){
       sound: rawSet.sound === undefined ? true : !!rawSet.sound,
       lastBackupAt: lb,
       hintDismissed: !!rawSet.hintDismissed,
-      customReasons: strList(rawSet.customReasons, 30, 40),
-      hiddenReasons: strList(rawSet.hiddenReasons, 30, 40),
-      customDeductReasons: strList(rawSet.customDeductReasons, 30, 40),
-      hiddenDeductReasons: strList(rawSet.hiddenDeductReasons, 30, 40),
+      /* 字數上限統一 40：面板/補原因輸入框都放行 40 字，這裡砍 30 會讓同一原因變成截斷版＋完整版兩顆 chip */
+      customReasons: strList(rawSet.customReasons, 40, 40),
+      hiddenReasons: strList(rawSet.hiddenReasons, 40, 40),
+      customDeductReasons: strList(rawSet.customDeductReasons, 40, 40),
+      hiddenDeductReasons: strList(rawSet.hiddenDeductReasons, 40, 40),
+      autoAddTyped: rawSet.autoAddTyped === undefined ? true : !!rawSet.autoAddTyped,
+      recentFirst: !!rawSet.recentFirst,
+      addToAll: !!rawSet.addToAll,
+      reasonWrap: !!rawSet.reasonWrap,
     },
     lastKid: null, tipOrder: [], tipIndex: 0, kids: [], events: [],
   };
@@ -713,10 +735,13 @@ function normalize(raw){
       name: (str(k.name, 12).trim()) || (d ? d.name : `寶貝${i + 1}`),
       emoji,
       /* 常用原因每個孩子各一份；舊備份只有全家共用的那份時，每個孩子先繼承它 */
-      customReasons: Array.isArray(k.customReasons) ? strList(k.customReasons, 30, 40) : [...s.settings.customReasons],
-      hiddenReasons: Array.isArray(k.hiddenReasons) ? strList(k.hiddenReasons, 30, 40) : [...s.settings.hiddenReasons],
-      customDeductReasons: Array.isArray(k.customDeductReasons) ? strList(k.customDeductReasons, 30, 40) : [...s.settings.customDeductReasons],
-      hiddenDeductReasons: Array.isArray(k.hiddenDeductReasons) ? strList(k.hiddenDeductReasons, 30, 40) : [...s.settings.hiddenDeductReasons],
+      customReasons: Array.isArray(k.customReasons) ? strList(k.customReasons, 40, 40) : [...s.settings.customReasons],
+      hiddenReasons: Array.isArray(k.hiddenReasons) ? strList(k.hiddenReasons, 40, 40) : [...s.settings.hiddenReasons],
+      customDeductReasons: Array.isArray(k.customDeductReasons) ? strList(k.customDeductReasons, 40, 40) : [...s.settings.customDeductReasons],
+      hiddenDeductReasons: Array.isArray(k.hiddenDeductReasons) ? strList(k.hiddenDeductReasons, 40, 40) : [...s.settings.hiddenDeductReasons],
+      /* 設定頁拖出來的順序（含內建與自訂）；不在清單裡的照原本順序接在後面 */
+      reasonOrder: strList(k.reasonOrder, 40, 90),
+      deductReasonOrder: strList(k.deductReasonOrder, 40, 90),
       /* 只收 base64 的點陣圖：SVG 或夾雜其他字元的 data URI 一律不收（防 CSS 注入） */
       photo: (typeof k.photo === 'string' && k.photo.length <= 120000 && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(k.photo)) ? k.photo : null,
       theme: (Number.isInteger(k.theme) && k.theme >= 0 && k.theme < THEMES.length) ? k.theme : i % THEMES.length,
@@ -1031,11 +1056,26 @@ function reasonPool(kid, deduct){
   const custom = deduct ? kid.customDeductReasons : kid.customReasons;
   return [...base.filter(r => !hidden.includes(r)), ...custom];
 }
-/* 這個孩子最近用過的排最前面 */
+/* 照設定頁拖出來的順序排；沒被排過的（例如剛自動加入的）照原本順序接在後面 */
+function orderedPool(kid, deduct){
+  const pool = reasonPool(kid, deduct);
+  const ord = (deduct ? kid.deductReasonOrder : kid.reasonOrder) || [];
+  if (!ord.length) return pool;
+  const pos = new Map(ord.map((r, i) => [r, i]));
+  /* sort 是穩定的：都不在 ord 裡的兩個會維持 pool 原順序 */
+  return [...pool].sort((a, b) => (pos.has(a) ? pos.get(a) : 1e9) - (pos.has(b) ? pos.get(b) : 1e9));
+}
+/* 面板順序：預設照設定頁排的；開了「最近用過的自動排前面」才浮動。
+   手打但沒進清單的原因（自動加入關著時）跟著「最近用過」活一陣子：
+   預設接在清單後面，不打亂排好的位置；浮動模式就跟其他最近的一起排前面。
+   被親手「收起」的內建原因例外——不准借道「最近用過」溜回來 */
 function reasonChipsFor(kid){
-  const pool = reasonPool(kid, false);
+  const pool = orderedPool(kid, false);
+  const recents = kid.recentReasons.filter(r => !kid.hiddenReasons.includes(r));
+  const extras = recents.filter(r => !pool.includes(r));
+  if (!state.settings.recentFirst) return [...pool, ...extras];
   const seen = new Set(); const out = [];
-  for (const r of [...kid.recentReasons.filter(r => pool.includes(r)), ...pool]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
+  for (const r of [...recents, ...pool]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
   return out;
 }
 function rememberReason(kid, r, deduct){
@@ -1043,11 +1083,27 @@ function rememberReason(kid, r, deduct){
   if (!deduct) kid.recentReasons = [r, ...kid.recentReasons.filter(x => x !== r)].slice(0, 6);
   const base = deduct ? DEDUCT_REASONS : REASONS;
   const custom = deduct ? kid.customDeductReasons : kid.customReasons;
-  /* 手打過的原因自動變成這個孩子的常用選項 */
-  if (!base.includes(r) && !custom.includes(r)){
+  /* 手打過的原因自動變成這個孩子的常用選項（設定頁可以關掉；關掉時只留在「最近用過」）。
+     滿 40 就不收——跟設定頁的上限行為一致，不無聲擠掉使用者自己排好的舊原因 */
+  if (state.settings.autoAddTyped && !base.includes(r) && !custom.includes(r) && custom.length < 40){
     custom.push(r);
-    if (custom.length > 40) custom.shift();
   }
+}
+/* 改選原因時，把「這一次蓋章才自動加進清單／最近」的舊字收回——
+   打錯字修正後，錯字不能永遠留在常用清單裡。只收這張工單加的，原本就在清單裡的不動 */
+function swapRemember(job, kid2, newR){
+  if (!kid2) return;
+  job.autoAdded = job.autoAdded || {};
+  const old = job.autoAdded[kid2.id];
+  if (old && old !== newR){
+    const ci = kid2.customReasons.indexOf(old);
+    if (ci >= 0) kid2.customReasons.splice(ci, 1);
+    kid2.recentReasons = kid2.recentReasons.filter(x => x !== old);
+    delete job.autoAdded[kid2.id];
+  }
+  const wasThere = !newR || REASONS.includes(newR) || kid2.customReasons.includes(newR) || kid2.recentReasons.includes(newR);
+  rememberReason(kid2, newR);
+  if (!wasThere) job.autoAdded[kid2.id] = newR;
 }
 
 /* 累積了一些紀錄、又超過 14 天沒把備份帶出這支手機，就該提醒了。
@@ -1781,7 +1837,9 @@ function showReasonPanel(job){
   $('rpCustom').classList.add('hide'); $('rpInput').value = '';
   $('rpInput').placeholder = `${kid.name} 做了什麼？`;
   $('rpSibs').classList.add('hide'); $('rpSibs').textContent = '';
-  $('rpSkip').textContent = '先跳過';
+  $('rpSkip').textContent = '先跳過'; $('rpSkip').classList.remove('fill');
+  /* 「其他…」固定第一顆：自己家的說法永遠最精準，入口不該被常用清單擠到最後 */
+  chips.append(h('button', { class:'chip', text:'其他…', onclick: () => { $('rpCustom').classList.remove('hide'); $('rpInput').focus(); clearTimeout(rpTimer); } }));
   for (const r of reasonChipsFor(kid)){
     chips.append(h('button', { class:'chip', text:r, 'aria-pressed':'false', onclick: e => {
       chips.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
@@ -1792,41 +1850,106 @@ function showReasonPanel(job){
       showSibs(job, r); rpArm();
     } }));
   }
-  chips.append(h('button', { class:'chip', text:'其他…', onclick: () => { $('rpCustom').classList.remove('hide'); $('rpInput').focus(); clearTimeout(rpTimer); } }));
+  /* 慶祝（滿 10/100）播完會重開面板：已經選過的原因與「還有誰也做了」要還原，
+     不能讓「再按一次收回」的入口在慶祝一播完就消失 */
+  const ev0 = state.events.find(x => x.id === job.id);
+  if (ev0 && ev0.reason){
+    const c0 = [...chips.children].find(c => c.textContent === ev0.reason);
+    if (c0){ c0.classList.add('on'); c0.setAttribute('aria-pressed', 'true'); }
+    showSibs(job, ev0.reason);
+  }
+  applyReasonWrap();
   $('reasonPanel').classList.add('on');
   rpArm();
 }
-/* 選了原因之後才問「還有誰也做了？」——問的是事實，不是發福利 */
+/* 原因列一行拖動 or 展開多行：偏好記在資料裡，換裝置還原備份也會跟著 */
+function applyReasonWrap(){
+  const on = !!state.settings.reasonWrap;
+  $('rpChips').classList.toggle('wrap', on);
+  $('rpExpand').classList.toggle('up', on);
+  $('rpExpand').setAttribute('aria-label', on ? '收成一行' : '展開全部原因');
+}
+/* 選了原因之後才問「還有誰也做了？」——問的是事實，不是發福利。
+   按一下＝立刻蓋（孩子當場看到）；再按一次＝悄悄收回（不出聲、不閃紅）。
+   長按連蓋 N 顆時，手足也是同一批 N 顆（同一件事就同一個量，使用者拍板）。 */
 function showSibs(job, reason){
+  /* 「完成」實心要在守門之前設：只有一個孩子時沒有手足列，但選了原因這件事一樣成立 */
+  $('rpSkip').textContent = '完成'; $('rpSkip').classList.add('fill');
   if (state.kids.length < 2) return;              /* 只有一個孩子就沒有「還有誰」 */
-  const box = $('rpSibs'); box.textContent = '';
+  const box = $('rpSibs');
+  const keepScroll = box.scrollLeft;               /* 重建整列時保住捲動位置：剛按的那顆不能滑出視野害人再按一次 */
+  box.textContent = '';
   job.sibStamps = job.sibStamps || {};             /* 已幫誰蓋過要記住：重選原因重建面板時不能歸零，不然會重複蓋 */
-  box.append(h('span', { text:'這件事，還有誰也做了？' }));
+  const nB = job.batchIds ? job.batchIds.length : 1;
+  box.append(h('span', { text: nB > 1 ? `這件事，還有誰也做了？（也蓋 ${nB} 顆）` : '這件事，還有誰也做了？' }));
   for (const s of state.kids.filter(k => k.id !== job.kid)){
-    const already = !!job.sibStamps[s.id];
-    const b = h('button', { onclick: () => {
-      if (job.sibStamps[s.id]) return;
-      const sj = addStamp(s.id, job.date, reason, false);
-      job.sibStamps[s.id] = sj.id;
-      sj.mini = true; enqueue(sj);
-      b.classList.add('done'); b.disabled = true; b.textContent = `✓ ${s.name} 也蓋了`;
-      rpArm();
-    } }, avaFace(s, 20), ` ${s.name}`);
-    if (already){ b.classList.add('done'); b.disabled = true; b.textContent = `✓ ${s.name} 也蓋了`; }
+    const cur2 = job.sibStamps[s.id];              /* {jobs, batchRef, firstTs}：收回時才能整批精準回收慶祝 */
+    const b = h('button', { class: cur2 ? 'done' : null, 'aria-pressed': cur2 ? 'true' : 'false', onclick: () => {
+      const oj = job.sibStamps[s.id];
+      if (oj){
+        /* 收回＝這一批當作沒發生：只收「這一批真的觸發過」的慶祝（batchRef 上有記），不用數字去猜 */
+        const skid = kidById(s.id);
+        let removed = 0;
+        for (const j2 of oj.jobs){
+          const i2 = state.events.findIndex(e2 => e2.id === j2.id);
+          if (i2 >= 0){ state.events.splice(i2, 1); removed++; }
+        }
+        if (removed && skid){
+          const cel = (oj.batchRef && oj.batchRef.celebrated) || [];
+          if (cel.length){
+            skid.celebrated = skid.celebrated.filter(m => !cel.includes(m));
+            state.events = state.events.filter(e2 => !(e2.type === 'gold' && e2.kid === skid.id && cel.includes(e2.n) && e2.ts >= (oj.firstTs || 0)));
+          }
+          /* 這一次蓋章才寫進他清單的原因也一併收回 */
+          if (job.autoAdded && job.autoAdded[s.id]){
+            const w = job.autoAdded[s.id];
+            const ci = skid.customReasons.indexOf(w);
+            if (ci >= 0) skid.customReasons.splice(ci, 1);
+            skid.recentReasons = skid.recentReasons.filter(x => x !== w);
+            delete job.autoAdded[s.id];
+          }
+          save(); renderAll();
+        }
+        delete job.sibStamps[s.id];
+        showSibs(job, reason); rpArm();
+        return;
+      }
+      const k2o = kidById(s.id);
+      const wasThere = !reason || REASONS.includes(reason) || (k2o && (k2o.customReasons.includes(reason) || k2o.recentReasons.includes(reason)));
+      /* 同一批共用 batchRef：跨過的滿 10/100 記在上面，收回時整批一起收 */
+      const ent = { jobs: [], batchRef: { celebrated: [] }, firstTs: 0 };
+      for (let i2 = 0; i2 < nB; i2++){
+        const sj = addStamp(s.id, job.date, reason, false);
+        sj.mini = true; sj.batchRef = ent.batchRef;
+        if (!ent.firstTs){
+          const se0 = state.events.find(e2 => e2.id === sj.id);
+          ent.firstTs = se0 ? se0.ts : Date.now();
+        }
+        ent.jobs.push(sj); enqueue(sj);
+      }
+      if (!wasThere){ job.autoAdded = job.autoAdded || {}; job.autoAdded[s.id] = reason; }
+      job.sibStamps[s.id] = ent;
+      showSibs(job, reason); rpArm();
+    } }, avaFace(s, 20), ` ${s.name}${cur2 ? ` 也蓋了${nB > 1 ? ` ${nB} 顆` : ''} ✓` : ''}`);
     box.append(b);
   }
   box.classList.remove('hide');
-  $('rpSkip').textContent = '完成';
+  box.scrollLeft = keepScroll;
 }
 function hideReasonPanel(){ clearTimeout(rpTimer); $('reasonPanel').classList.remove('on'); $('rpInput').blur(); }
 function setReason(job, r){
   const e = state.events.find(x => x.id === job.id); if (!e) return;
-  e.reason = r; rememberReason(kidById(e.kid), r);
-  /* 家長是「改選」原因：已經幫手足蓋出去的那幾筆也要跟著改，不能留舊原因 */
+  e.reason = r; swapRemember(job, kidById(e.kid), r);
+  /* 家長是「改選」原因：已經幫手足蓋出去的那幾筆（整批）也要跟著改，不能留舊原因；
+     手足的「最近用過」與自動加入也跟著最終的原因走，清單才不會留一個沒人選過的舊字 */
   if (job.sibStamps){
-    for (const id of Object.values(job.sibStamps)){
-      const se = state.events.find(x => x.id === id);
-      if (se) se.reason = r;
+    for (const ent of Object.values(job.sibStamps)){
+      let sibKid = null;
+      for (const sj of ent.jobs){
+        const se = state.events.find(x => x.id === sj.id);
+        if (se){ se.reason = r; sibKid = sibKid || kidById(se.kid); }
+      }
+      if (sibKid) swapRemember(job, sibKid, r);
     }
   }
   /* 長按連蓋的整批：原因套到每一顆 */
@@ -1839,6 +1962,7 @@ function setReason(job, r){
   save();
 }
 $('rpSkip').onclick = hideReasonPanel;
+$('rpExpand').onclick = () => { state.settings.reasonWrap = !state.settings.reasonWrap; save(); applyReasonWrap(); rpArm(); };
 $('rpSave').onclick = () => {
   const r = $('rpInput').value.trim();
   if (rpJob && r){ setReason(rpJob, r); toast('⭐ ' + r, { ms:1200 }); $('rpCustom').classList.add('hide'); showSibs(rpJob, r); rpArm(); }
@@ -2044,7 +2168,7 @@ function openDeduct(key){
     openSheet('deductSheet'); return;
   }
   bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
-  const picker = chipPicker(reasonPool(kid, true), { grey:true, placeholder:'發生了什麼事？' });
+  const picker = chipPicker(orderedPool(kid, true), { grey:true, placeholder:'發生了什麼事？' });
   bd.append(picker.el);
   const holdTx = h('span', { text:'按住不放才會扣' });
   const hold = h('button', { class:'hold' }, h('div', { class:'fill' }), holdTx);
@@ -2366,15 +2490,28 @@ function openSettings(){
       const usedE = new Set(state.kids.map(k2 => k2.emoji));
       const em = EMOJIS.find(e2 => !usedE.has(e2)) || '🐥';
       state.kids.push({ id:'k' + nn, name:`寶貝${state.kids.length + 1}`, emoji:em, photo:null, theme:th,
-        celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[] });
+        celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] });
       save(); renderAll(); openSettings();
       toast('加好了！幫他改個名字吧', { ms:3000 });
     } }));
   }
   }
   if (settingsTab === 'reasons'){
-  /* ── 常用原因：每個孩子各一份，可以照自己家的說法增刪，內建的也能收起來 ── */
+  /* ── 常用原因：每個孩子各一份，可以照自己家的說法增刪、拖動排序，內建的也能收起來 ── */
   if (!reasonEditKidId || !kidById(reasonEditKidId)) reasonEditKidId = state.lastKid;
+  bd.append(h('div', { class:'sec', text:'原因怎麼運作' }));
+  const mkToggle = (label, note, skey) => {
+    const tg = h('button', { class:'toggle' + (state.settings[skey] ? ' on' : ''), role:'switch',
+      'aria-checked': state.settings[skey] ? 'true' : 'false', 'aria-label': label,
+      onclick: () => {
+        state.settings[skey] = !state.settings[skey]; save();
+        tg.classList.toggle('on', !!state.settings[skey]);
+        tg.setAttribute('aria-checked', state.settings[skey] ? 'true' : 'false');
+      } });
+    bd.append(h('div', { class:'srow' }, h('div', {}, h('div', { text:label }), h('div', { class:'note', text:note })), tg));
+  };
+  mkToggle('手打過的原因自動變成選項', '關掉後，手打的蓋章原因只會在「最近用過」出現一陣子、手打的扣除原因不會留下；清單只留你自己加的。', 'autoAddTyped');
+  mkToggle('最近用過的自動排前面', '關掉時，蓋章面板的順序就照下面清單排的來，位置固定好記。', 'recentFirst');
   const reasonEditor = (rkid, title, note, deduct) => {
     const base = deduct ? DEDUCT_REASONS : REASONS;
     const custom = deduct ? rkid.customDeductReasons : rkid.customReasons;
@@ -2383,29 +2520,90 @@ function openSettings(){
     bd.append(h('p', { class:'sub', text:note }));
     const wrap = h('div', { class:'rlist' });
     const redraw = () => { save(); openSettings(); };
-    for (const r of base){
-      const off = hidden.includes(r);
-      wrap.append(h('button', { class:'rtag' + (off ? ' off' : ''), onclick: () => {
-        if (off) hidden.splice(hidden.indexOf(r), 1); else hidden.push(r);
-        redraw();
-      } }, h('span', { text:r }), h('em', { text: off ? '＋' : '×' })));
+    const saveOrder = () => {
+      /* 拖完照畫面上的順序落地；被收起的（.off）不算在順序裡 */
+      const seq = [...wrap.querySelectorAll('.rtag:not(.off)')].map(t => t.getAttribute('data-r'));
+      if (deduct) rkid.deductReasonOrder = seq; else rkid.reasonOrder = seq;
+      save();
+    };
+    /* 拖「≡」排順序：move 用 elementFromPoint 找壓到哪一顆，插到它前後。
+       只有把手吃 touch-action:none，其他地方照常捲頁。 */
+    const startDrag = (tag, e0) => {
+      e0.preventDefault();
+      tag.classList.add('drag');
+      const pid = e0.pointerId;                    /* 只認起手那根手指：第二指誤觸不能劫持拖動或提早存檔 */
+      const move = e2 => {
+        if (e2.pointerId !== pid) return;
+        const el = document.elementFromPoint(e2.clientX, e2.clientY);
+        const over = el && el.closest ? el.closest('.rtag') : null;
+        if (over && over !== tag && over.parentElement === wrap && !over.classList.contains('off')){
+          const rc = over.getBoundingClientRect();
+          const before = e2.clientY < rc.top + rc.height / 2 - 1
+            || (e2.clientY < rc.bottom && e2.clientX < rc.left + rc.width / 2);
+          wrap.insertBefore(tag, before ? over : over.nextSibling);
+        }
+      };
+      const up = e2 => {
+        if (e2.pointerId !== pid) return;
+        removeEventListener('pointermove', move);
+        removeEventListener('pointerup', up);
+        removeEventListener('pointercancel', up);
+        tag.classList.remove('drag');
+        saveOrder();
+      };
+      addEventListener('pointermove', move);
+      addEventListener('pointerup', up);
+      addEventListener('pointercancel', up);
+    };
+    for (const r of orderedPool(rkid, deduct)){
+      const isCustom = custom.includes(r);
+      const grab = h('em', { class:'grab', text:'≡', 'aria-hidden':'true' });
+      const tag = h('div', { class:'rtag' + (isCustom ? ' mine' : ''), 'data-r':r }, grab, h('span', { text:r }),
+        h('button', { class:'rx', text:'×', 'aria-label': isCustom ? `刪掉「${r}」` : `收起「${r}」`, onclick: () => {
+          if (isCustom) custom.splice(custom.indexOf(r), 1); else hidden.push(r);
+          redraw();
+        } }));
+      grab.addEventListener('pointerdown', e2 => startDrag(tag, e2));
+      wrap.append(tag);
     }
-    for (const r of custom){
-      wrap.append(h('button', { class:'rtag mine', onclick: () => {
-        custom.splice(custom.indexOf(r), 1); redraw();
-      } }, h('span', { text:r }), h('em', { text:'×' })));
+    for (const r of base.filter(x => hidden.includes(x))){
+      wrap.append(h('div', { class:'rtag off', 'data-r':r }, h('span', { text:r }),
+        h('button', { class:'rx', text:'＋', 'aria-label':`重新啟用「${r}」`, onclick: () => {
+          hidden.splice(hidden.indexOf(r), 1); redraw();
+        } })));
     }
     bd.append(wrap);
-    const inp = h('input', { placeholder: deduct ? '例如：亂丟別人的東西' : '例如：自己倒水沒灑出來', maxlength:'30', enterkeyhint:'done' });
+    const inp = h('input', { placeholder: deduct ? '例如：亂丟別人的東西' : '例如：自己倒水沒灑出來', maxlength:'40', enterkeyhint:'done' });
     const add = () => {
       const v = inp.value.trim();
       if (!v) return;
-      if (base.includes(v) || custom.includes(v)){ toast('這個原因已經在清單裡了', { ms:2000 }); inp.value = ''; return; }
-      if (custom.length >= 40){ toast('自訂原因最多 40 個', { ms:2000 }); return; }
-      custom.push(v); inp.value = ''; redraw();
+      const targets = state.settings.addToAll ? state.kids : [rkid];
+      let added = 0, full = false;
+      for (const kk of targets){
+        const c2 = deduct ? kk.customDeductReasons : kk.customReasons;
+        if (base.includes(v) || c2.includes(v)) continue;
+        if (c2.length >= 40){ full = true; continue; }
+        c2.push(v); added++;
+      }
+      if (!added){ toast(full ? '自訂原因最多 40 個' : '這個原因已經在清單裡了', { ms:2000 }); inp.value = ''; return; }
+      inp.value = '';
+      if (state.settings.addToAll && targets.length > 1) toast(`已加給 ${added} 個孩子`, { ms:1800 });
+      redraw();
     };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); add(); } });
+    const allChip = h('button', { class:'chip grey addall' + (state.settings.addToAll ? ' on' : ''),
+      style:'height:36px;font-size:14px;padding:0 12px;margin-top:8px',
+      'aria-pressed': state.settings.addToAll ? 'true' : 'false', text:'每個孩子都加',
+      onclick: () => {
+        state.settings.addToAll = !state.settings.addToAll; save();
+        /* 兩個編輯器各有一顆，一起亮一起暗，不重畫（重畫會把打到一半的字洗掉） */
+        document.querySelectorAll('.chip.addall').forEach(c => {
+          c.classList.toggle('on', !!state.settings.addToAll);
+          c.setAttribute('aria-pressed', state.settings.addToAll ? 'true' : 'false');
+        });
+      } });
     bd.append(h('div', { class:'inrow' }, inp, h('button', { text:'加入', onclick: add })));
+    bd.append(allChip);
   };
   bd.append(h('div', { class:'sec', text:'常用原因（每個孩子分開設定）' }));
   const rsw = h('div', { class:'btns' });
@@ -2415,7 +2613,7 @@ function openSettings(){
   }
   bd.append(rsw);
   const rkid = kidById(reasonEditKidId);
-  reasonEditor(rkid, `${rkid.name} 蓋章的常用原因`, '這些會出現在蓋章後的選項裡。點內建的可以收起來，點自己加的會刪掉；手打過的原因也會自動加進來。', false);
+  reasonEditor(rkid, `${rkid.name} 蓋章的常用原因`, '這些會出現在蓋章後的選項裡。拖「≡」調整順序；點「×」收起內建的、刪掉自己加的。', false);
   reasonEditor(rkid, `${rkid.name} 扣除的常用原因`, '扣除時用的選項，跟蓋章的分開。', true);
 
   }
@@ -2670,6 +2868,9 @@ function openSettings(){
     h('p', { class:'sub', text:'之後從主畫面圖示打開，會像 app 一樣全螢幕，沒網路也能用。' }),
     h('p', { class:'sub', text:'注意兩件事：Safari 分頁跟主畫面 app 的資料是分開存的，先加到主畫面再開始蓋章；還有，只在 Safari 分頁裡用的話，一個禮拜沒打開 iPhone 可能會自動清掉，裝到主畫面才會長期保留。' })));
   bd.append(h('p', { class:'sub', style:'margin-top:16px', text: cloudOn() ? '好棒印章 v1 ・ 資料只去你自己的 GitHub 備份，不去任何其他地方。' : '好棒印章 v1 ・ 資料不會離開你的手機。' }));
+  bd.append(h('p', { class:'sub', style:'margin-top:6px;text-align:center' }, '© 2026 ',
+    h('a', { href:'https://www.facebook.com/profile.php?id=100084000897269', target:'_blank', rel:'noopener',
+      style:'color:var(--accent-dark);font-weight:700;text-decoration:none', text:'指數三寶飯' }), ' ・ 版權所有'));
   }
   openSheet('settingsSheet');
   bd.scrollTop = st0;
