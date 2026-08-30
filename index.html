@@ -239,8 +239,8 @@ svg{display:block}
   /* 展開不能無上限長高：原因一多會把面板頂端（含「其他…」與收合鈕）頂出螢幕外，變成點不到 */
   max-height:max(96px, calc(100vh - var(--kb, 0px) - 380px));
   max-height:max(96px, calc(100dvh - var(--kb, 0px) - 380px))}
-#rpExpand{flex:0 0 34px; width:34px; height:44px; border:0; background:none; color:var(--dim); font-size:20px; padding:0; transition:transform .2s}
-#rpExpand.up{transform:rotate(180deg)}
+.chevx{flex:0 0 34px; width:34px; height:44px; border:0; background:none; color:var(--dim); font-size:20px; padding:0; transition:transform .2s}
+.chevx.up{transform:rotate(180deg)}
 .chip{height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--ink); font-size:16px; white-space:nowrap; flex:0 0 auto; transition:background-color .12s, color .12s}
 .chip.on{background:var(--accent-dark); color:#fff}
 .chip.grey{border-color:var(--grey)}
@@ -522,7 +522,7 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
 
 <div id="reasonPanel" role="region" aria-label="蓋章後的選項">
   <div class="ttl"><span aria-live="polite">加上原因？（可以不填）</span></div>
-  <div class="chiprow"><div class="chips row" id="rpChips"></div><button id="rpExpand" aria-label="展開全部原因">⌄</button></div>
+  <div class="chiprow"><div class="chips row" id="rpChips"></div><button id="rpExpand" class="chevx" aria-label="展開全部原因">⌄</button></div>
   <div class="inrow hide" id="rpCustom"><input id="rpInput" placeholder="做了什麼？" maxlength="40" enterkeyhint="done"><button id="rpSave">儲存</button></div>
   <div class="sibs hide" id="rpSibs"></div>
   <div class="rpfoot"><button id="rpSkip">先跳過</button><button id="rpUndo">蓋錯了，拿掉這顆</button></div>
@@ -772,7 +772,7 @@ let state = null;
 let lastSaveOk = true;
 function fresh(){
   return {
-    version: 1,
+    version: 2,   /* v2：滿 N 統計與大數字不含「調整」（調整只進總好棒） */
     settings: {
       sound:true, lastBackupAt:null, hintDismissed:false,
       /* 舊版全家共用的自訂原因（保留給舊備份遷移用）；現在每個孩子各一份 */
@@ -801,7 +801,7 @@ function normalize(raw){
   const strList = (a, max, cap) => [...new Set((Array.isArray(a) ? a : [])
     .filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().slice(0, max)))].slice(0, cap);
   const s = {
-    version: 1,
+    version: 2,
     settings: {
       sound: rawSet.sound === undefined ? true : !!rawSet.sound,
       lastBackupAt: lb,
@@ -890,6 +890,17 @@ function normalize(raw){
   s.tipOrder = (Array.isArray(raw.tipOrder) ? raw.tipOrder : [])
     .filter(i => Number.isInteger(i) && i >= 0 && i < TIPS.length);
   s.tipIndex = Math.min(Math.max(0, Number(raw.tipIndex) || 0), s.tipOrder.length);
+  /* v1 → v2：滿 N 統計改成只看「蓋章 − 扣除」（調整不進統計）。
+     v1 的調整曾把跨過的滿 10 靜默補進 celebrated——這批要清掉，
+     不然帶著舊帳的孩子（celebrated 已有 10、20）永遠等不到下一次慶祝。
+     只在舊版資料上做一次：v2 之後「扣到低於已慶祝數字」是合法狀態，不能每次都剪 */
+  if ((Number(raw.version) || 1) < 2){
+    for (const k of s.kids){
+      const sn = s.events.filter(e => e.kid === k.id && e.type === 'plus').length
+               - s.events.filter(e => e.kid === k.id && e.type === 'minus').length;
+      k.celebrated = k.celebrated.filter(m => m <= Math.max(0, sn));
+    }
+  }
   return s;
 }
 function load(){
@@ -1119,31 +1130,27 @@ async function pruneSnapshots(db){
 const kidById = id => state.kids.find(k => k.id === id);
 const cur = () => kidById(state.lastKid);
 const eventsOf = kid => state.events.filter(e => e.kid === kid);
-/* 收集數：蓋章 − 扣除 ＋ 調整。月曆星星、進度點、滿 10/100 都看它。
-   兌換「不」動這個數——換掉的是可用餘額，孩子做到的事不會變少。 */
+/* 收集數：蓋章 − 扣除。大數字、進度點、滿 10/100 都看它。
+   「調整」不算在內（使用者拍板：以前在別處累積的是舊帳，只進總好棒可兌換數，
+   不進任何統計）；兌換也「不」動這個數——孩子做到的事不會變少。 */
 const netOf = kid => {
   let n = 0;
   for (const e of eventsOf(kid)){
     if (e.type === 'plus') n++;
     else if (e.type === 'minus') n--;
-    else if (e.type === 'adjust') n += e.n || 0;
   }
   return Math.max(0, n);
 };
-/* 總好棒（可用餘額）＝ 收集數 − 已兌換 */
+/* 總好棒（可用餘額）＝ 收集數 ＋ 調整 − 已兌換。調整只活在這裡 */
 const redeemedOf = kid => eventsOf(kid).filter(e => e.type === 'redeem').reduce((s, e) => s + (e.n || 0), 0);
-const walletOf = kid => Math.max(0, netOf(kid) - redeemedOf(kid));
-/* 手動調整：正數視為「以前就累積過的」，跨過的每個 10 直接記成已慶祝，不補放煙火 */
+const adjustOf = kid => eventsOf(kid).filter(e => e.type === 'adjust').reduce((s, e) => s + (e.n || 0), 0);
+const walletOf = kid => Math.max(0, netOf(kid) + adjustOf(kid) - redeemedOf(kid));
+/* 手動調整：只進總好棒，不碰 celebrated——滿 N 的旅程從 app 裡第一顆蓋起 */
 function addAdjust(kidId, n, reason){
   const kid = kidById(kidId);
   n = Math.trunc(n);
-  if (!kid || !n || Math.abs(n) > 10000) return;    /* 上限跟 normalize 對齊，天文數字也不會凍住回填迴圈 */
-  const before = netOf(kidId);
+  if (!kid || !n || Math.abs(n) > 10000) return;    /* 上限跟 normalize 對齊 */
   state.events.push({ id:newId(), kid:kidId, type:'adjust', date:todayKey(), ts:Date.now(), reason:reason || '', n });
-  const after = netOf(kidId);
-  for (let m = Math.floor(before/10)*10 + 10; m <= after; m += 10){
-    if (!kid.celebrated.includes(m)) kid.celebrated.push(m);
-  }
   save();
 }
 function monthStats(kid, y, m){
@@ -1619,17 +1626,21 @@ document.querySelectorAll('.sheet .hd').forEach(hd => {
 document.querySelectorAll('.sheet .shx').forEach(b => { b.onclick = closeSheet; });
 
 /* ───────── chips 元件：回傳 {el, value()} ───────── */
+/* 原因選單（扣好棒、補蓋日期共用）：跟蓋章面板同一套——
+   「其他…」固定第一顆、單行左右滑、右端「⌄」展開多行，展不展開跟主面板共用同一個記憶 */
 function chipPicker(list, opt){
   opt = opt || {};
   let value = '';
   const wrap = h('div');
-  const chips = h('div', { class:'chips' + (opt.row ? ' row' : '') });
+  const chips = h('div', { class:'chips row' + (state.settings.reasonWrap ? ' wrap' : '') });
   const custom = h('div', { class:'inrow hide' });
   const input = h('input', { placeholder: opt.placeholder || '做了什麼？', maxlength:'40', enterkeyhint:'done' });
   const saveBtn = h('button', { text:'儲存', onclick: () => { value = input.value.trim(); if (opt.onPick) opt.onPick(value, true); } });
   input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); saveBtn.click(); } });
   custom.append(input, saveBtn);
   function setOn(btn){ chips.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); }); if (btn){ btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); } }
+  const other = h('button', { class:'chip' + (opt.grey ? ' grey' : ''), text:'其他…', onclick: () => { setOn(other); value = ''; custom.classList.remove('hide'); input.focus(); if (opt.onOther) opt.onOther(); } });
+  chips.append(other);
   for (const r of list){
     const c = h('button', { class:'chip' + (opt.grey ? ' grey' : ''), text:r, 'aria-pressed':'false', onclick: () => {
       if (c.classList.contains('on')){ setOn(null); value = ''; custom.classList.add('hide'); if (opt.onPick) opt.onPick('', false); return; }
@@ -1637,9 +1648,14 @@ function chipPicker(list, opt){
     } });
     chips.append(c);
   }
-  const other = h('button', { class:'chip' + (opt.grey ? ' grey' : ''), text:'其他…', onclick: () => { setOn(other); value = ''; custom.classList.remove('hide'); input.focus(); if (opt.onOther) opt.onOther(); } });
-  chips.append(other);
-  wrap.append(chips, custom);
+  const ex = h('button', { class:'chevx' + (state.settings.reasonWrap ? ' up' : ''), text:'⌄',
+    'aria-label': state.settings.reasonWrap ? '收成一行' : '展開全部原因', onclick: () => {
+      state.settings.reasonWrap = !state.settings.reasonWrap; save();
+      chips.classList.toggle('wrap', state.settings.reasonWrap);
+      ex.classList.toggle('up', state.settings.reasonWrap);
+      ex.setAttribute('aria-label', state.settings.reasonWrap ? '收成一行' : '展開全部原因');
+    } });
+  wrap.append(h('div', { class:'chiprow' }, chips, ex), custom);
   return { el:wrap, value: () => (custom.classList.contains('hide') ? value : input.value.trim()), input };
 }
 
@@ -1662,17 +1678,8 @@ function addStamp(kidId, date, reason, quick){
 function removeEvent(id){
   const i = state.events.findIndex(e => e.id === id);
   if (i < 0) return false;
-  const ev = state.events[i];
   state.events.splice(i, 1);
-  /* 刪掉一筆正向調整（多半是按錯了在修正）：它當時靜默補進 celebrated 的滿 10
-     也要一併收回，不然孩子真的蓋到第 10 顆時，慶祝已被那次誤觸吃掉了 */
-  if (ev.type === 'adjust' && ev.n > 0){
-    const kid = kidById(ev.kid);
-    if (kid){
-      const after = netOf(ev.kid);
-      kid.celebrated = kid.celebrated.filter(m => !(m > after && m <= after + ev.n));
-    }
-  }
+  /* 調整從 v2 起不碰 celebrated，刪調整也就不用回收什麼 */
   save(); return true;
 }
 
@@ -2570,15 +2577,16 @@ function openSettings(){
       const v = Math.trunc(Number(adjIn.value));
       if (!v){ toast('輸入要加減的數字，例如 30 或 -5', { ms:2500 }); return; }
       if (Math.abs(v) > 10000){ toast('一次最多調整 10000 顆', { ms:3000 }); return; }
-      const C = netOf(k.id), Wv = walletOf(k.id);
-      if (v < 0 && (C + v < 0 || Wv + v < 0)){ toast(`最多只能減 ${Math.min(C, Wv)} 顆`, { ms:3000 }); return; }
+      const Wv = walletOf(k.id);
+      /* 調整只動總好棒：往下修只要別讓總好棒變負數就好（大數字跟它無關了） */
+      if (v < 0 && Wv + v < 0){ toast(`最多只能減 ${Wv} 顆`, { ms:3000 }); return; }
       addAdjust(k.id, v, '手動調整');
       adjIn.value = '';
       renderAll(); openSettings();
       toast(`${k.name} 的總好棒${v > 0 ? '加了' : '減了'} ${Math.abs(v)} 顆`, { ms:3000 });
     } });
     adjIn.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); adjBtn.click(); } });
-    card.append(h('div', { class:'note', style:'margin-top:10px', text:'之前在別處累積的好棒可以在這裡一次加進來；中間跨過的滿 10 不會補放慶祝。' }));
+    card.append(h('div', { class:'note', style:'margin-top:10px', text:'之前在別處累積的好棒可以在這裡一次加進來。加的只進「總好棒」可以換的數字；大數字與滿 10 滿 100 的進度，照樣從在 app 裡蓋的章算起。' }));
     card.append(h('div', { class:'inrow' }, adjIn, adjBtn));
     const sw = h('div', { class:'sw' });
     THEMES.forEach((th, i) => sw.append(h('button', {
