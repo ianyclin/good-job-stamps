@@ -1235,8 +1235,20 @@ function applyTheme(){
   r.setProperty('--bg', t.bg); r.setProperty('--card', t.card); r.setProperty('--accent', t.accent);
   r.setProperty('--accent-dark', t.accentDark); r.setProperty('--ink', t.ink);
   r.setProperty('--ink-rgb', hexRgb(t.ink)); r.setProperty('--accent-rgb', hexRgb(t.accent));
-  $('themeColor').setAttribute('content', t.bg);
+  setThemeColor(t.bg);
 }
+/* iOS 主畫面 app 的狀態列顏色跟著 theme-color meta 走，但 WebKit 對「就地改 content」
+   常常裝死——切完孩子狀態列還留著上一個孩子的顏色。整顆 meta 拔掉重插逼它重新上色；
+   切回前景時再補刷一次（殘影最常發生在剛切回 app 的瞬間） */
+function setThemeColor(v){
+  const old = document.getElementById('themeColor');
+  const fresh = document.createElement('meta');
+  fresh.name = 'theme-color'; fresh.id = 'themeColor'; fresh.setAttribute('content', v);
+  if (old && old.parentNode) old.parentNode.replaceChild(fresh, old);
+  else document.head.appendChild(fresh);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) try { applyTheme(); } catch (e) {} });
+addEventListener('pageshow', () => { try { applyTheme(); } catch (e) {} });
 
 /* ───────── 1. 孩子切換列 ───────── */
 function renderKids(){
@@ -2142,12 +2154,15 @@ $('bigBtn').onclick = () => {
 };
 
 /* 一次蓋好幾顆：一件事做得很大，或晚上一次補記。
-   每一顆都是獨立的一筆（里程碑照算），選一次原因會套用到整批。 */
-function openMulti(){
+   每一顆都是獨立的一筆（里程碑照算），選一次原因會套用到整批。
+   不帶 key＝蓋在今天；帶 key＝從日期 sheet 長按進來的「補蓋多顆」 */
+function openMulti(key){
+  key = key || todayKey();
   const kid = cur(); const bd = $('deductBd'); bd.textContent = '';
   $('deductSheet').setAttribute('aria-label', '一次蓋好幾顆');
   bd.append(h('h2', {}, avaFace(kid, 24), ` 一次幫 ${kid.name} 蓋幾顆？`));
-  bd.append(h('p', { class:'sub', text:'一件事做得很大（像全家大掃除），或一次補記好幾件。之後選的原因會記在這一批的每一顆上。' }));
+  const kd = parseKey(key);
+  bd.append(h('p', { class:'sub', text:`${key === todayKey() ? '' : `蓋在 ${kd.getMonth()+1} 月 ${kd.getDate()} 日（${WD[kd.getDay()]}）。`}一件事做得很大（像全家大掃除），或一次補記好幾件。之後選的原因會記在這一批的每一顆上。` }));
   const quick = h('div', { class:'chips', style:'margin-bottom:10px' });
   const cnt = h('input', { type:'number', inputmode:'numeric', placeholder:'幾顆？（最多 20）', min:'1', max:'20' });
   for (const v of [2, 3, 4, 5]) quick.append(h('button', { class:'chip', text:String(v), onclick: () => { cnt.value = String(v); sync2(); } }));
@@ -2165,13 +2180,15 @@ function openMulti(){
     const c = Math.trunc(Number(cnt.value));
     if (c < 1 || c > 20) return;
     closeSheet();
-    const now = new Date();
-    if (view.y !== now.getFullYear() || view.m !== now.getMonth()){ view = { y:now.getFullYear(), m:now.getMonth() }; renderCalendar(); }
+    /* 畫面翻到這批要蓋的那個月份，印章才會飛進正確的格子 */
+    if (kd.getFullYear() !== view.y || kd.getMonth() !== view.m){
+      view = { y:kd.getFullYear(), m:kd.getMonth() }; renderCalendar(); renderHero();
+    }
     const ids = [], jobs = [];
     const baseNet = netOf(kid.id);
     const firstTs = Date.now();
     for (let i = 0; i < c; i++){
-      const j = addStamp(kid.id, todayKey(), '', i === c - 1);   /* 只有最後一顆帶出原因面板 */
+      const j = addStamp(kid.id, key, '', i === c - 1);   /* 只有最後一顆帶出原因面板 */
       ids.push(j.id); jobs.push(j);
     }
     const last = jobs[jobs.length - 1];
@@ -2199,7 +2216,10 @@ function openDay(key){
   bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
   const picker = chipPicker(reasonChipsFor(kid), { placeholder:`${kid.name} 做了什麼？`, onPick: () => {} });
   bd.append(picker.el);
+  /* 補蓋也跟主按鈕同一種語彙：點一下蓋一顆、按住不放一次蓋好幾顆 */
+  let dayHold = 0, daySuppress = false;
   const btn = h('button', { class:'pbtn', onclick: async () => {
+    if (daySuppress){ daySuppress = false; return; }   /* 長按放開時的 click 不能又蓋一顆 */
     const reason = picker.value();
     const job = addStamp(kid.id, key, reason, false);
     closeSheet();
@@ -2212,6 +2232,16 @@ function openDay(key){
     await wait(260);                                   /* 等 sheet 收完再量格子座標 */
     enqueue(job);
   } }, svgStar(), h('span', { text:'蓋好棒！' }));
+  btn.addEventListener('pointerdown', () => {
+    clearTimeout(dayHold);
+    dayHold = setTimeout(() => { daySuppress = true; SFX.tick(); openMulti(key); }, 600);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => btn.addEventListener(t, () => {
+    clearTimeout(dayHold);
+    /* 旗標要自己過期：長按放開不一定會產生 click，卡住會吞掉下一次正常點擊 */
+    if (daySuppress) setTimeout(() => { daySuppress = false; }, 400);
+  }));
+  btn.addEventListener('contextmenu', e => e.preventDefault());
   bd.append(btn);
   bd.append(h('button', { class:'lnk', text:'在這天扣一顆', onclick: () => openDeduct(key) }));
   openSheet('daySheet');
