@@ -91,7 +91,7 @@ svg{display:block}
 .dots i{width:8px; height:8px; border-radius:50%; border:1.5px solid var(--accent-dark); display:block; transition:background-color .2s}
 .dots i.on{background:var(--accent); border-color:var(--accent)}
 .hero-sub{font-size:14px; color:rgba(var(--ink-rgb),.78); margin-top:6px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-/* 歷來累計：跨過每一個月份，一共蓋過幾顆 */
+/* 第二行：總好棒現在可以換幾顆（歷史累計退到紀錄頁看） */
 .hero-total{font-size:13px; color:rgba(var(--ink-rgb),.62); margin-top:3px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .hero-total b{font-weight:800; color:var(--accent-dark); font-size:14px}
 
@@ -382,6 +382,19 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
 #rpSkip{height:44px; padding:0 20px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--accent-dark); font-size:16px; font-weight:700; flex:0 0 auto}
 #rpSkip.fill{background:var(--accent-dark); color:#fff}
 #rpUndo{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; padding:0 4px; text-align:right}
+/* 照片頭像的裁切調整層：圓圈預覽＋拖動＋縮放 */
+#cropLay{position:fixed; inset:0; z-index:90; background:rgba(0,0,0,.74); display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:20px}
+#cropLay.on{display:flex}
+.cropTtl{color:#fff; font-size:15px; text-align:center; line-height:1.55; text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.cropBox{width:min(76vw,280px); height:min(76vw,280px); border-radius:50%; overflow:hidden; position:relative; background:#111;
+  box-shadow:0 0 0 3px rgba(255,255,255,.95), 0 12px 40px rgba(0,0,0,.5); touch-action:none; cursor:grab; flex:0 0 auto}
+.cropBox img{position:absolute; left:0; top:0; transform-origin:0 0; max-width:none; pointer-events:none; -webkit-user-select:none; user-select:none}
+.cropZoom{display:flex; align-items:center; gap:10px; width:min(76vw,280px); color:#fff; font-size:14px}
+.cropZoom input{flex:1; min-height:44px; accent-color:var(--accent-dark)}
+.cropBtns{display:flex; gap:12px}
+.cropBtns button{height:48px; padding:0 22px; border-radius:24px; font-size:16px; font-weight:700; border:0}
+#cropCancel{background:rgba(255,255,255,.18); color:#fff}
+#cropOk{background:var(--accent-dark); color:#fff}
 /* 滿 10：十顆星星逐顆點亮清點 */
 #tenlay{position:fixed; inset:0; z-index:66; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .2s}
 #tenlay.on{opacity:1}
@@ -517,6 +530,13 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
 
 <div id="toast" role="status" aria-live="polite"><span id="toastTx"></span><button id="toastBtn" class="hide"></button></div>
 
+<div id="cropLay" role="dialog" aria-modal="true" aria-label="調整頭像範圍">
+  <p class="cropTtl">拖動照片、調整大小，<br>讓圓圈框住最棒的表情</p>
+  <div class="cropBox" id="cropBox"><img id="cropImg" alt=""></div>
+  <div class="cropZoom"><span>小</span><input id="cropRange" type="range" min="0" max="100" value="0" aria-label="照片縮放"><span>大</span></div>
+  <div class="cropBtns"><button id="cropCancel">取消</button><button id="cropOk">就用這個範圍</button></div>
+</div>
+
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="daySheet" role="dialog" aria-modal="true" aria-label="這一天的紀錄"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="dayBd"></div></div>
 <div class="sheet" id="deductSheet" role="dialog" aria-modal="true" aria-label="扣除一顆"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="deductBd"></div></div>
@@ -621,27 +641,117 @@ function avaFace(kid, size){
   if (kid.photo) return h('img', { class:'face', src:kid.photo, alt:'', style:`width:${size}px;height:${size}px` });
   return h('span', { style:`font-size:${Math.round(size*.85)}px;line-height:1;vertical-align:-2px`, text:kid.emoji });
 }
-/* 把選來的照片裁成正方形、縮到 96px 存成 JPEG：三個孩子加起來十幾 KB，撞不到容量 */
+/* 選好照片先進「調整範圍」：拖動＋縮放挑出圓圈裡最合適的一塊，
+   確定後才裁下來縮到 96px 存 JPEG（三個孩子加起來十幾 KB，撞不到容量） */
 function setPhoto(kid, file, done){
   const img = new Image();
   const url = URL.createObjectURL(file);
-  img.onload = () => {
-    try {
-      const S = 96, c = document.createElement('canvas'); c.width = S; c.height = S;
-      const g = c.getContext('2d');
-      const m = Math.min(img.naturalWidth, img.naturalHeight);
-      g.drawImage(img, (img.naturalWidth - m)/2, (img.naturalHeight - m)/2, m, m, 0, 0, S, S);
-      let d = c.toDataURL('image/jpeg', .82);
-      if (d.length > 60000) d = c.toDataURL('image/jpeg', .5);
-      kid.photo = d; save(); renderKids();
-      if (done) done();
-      toast('頭像換好了', { ms:1500 });
-    } catch (e) { toast('這張照片處理不了'); }
-    URL.revokeObjectURL(url);
-  };
+  img.onload = () => openCrop(img, url, kid, done);
   img.onerror = () => { URL.revokeObjectURL(url); toast('這張照片讀不進來'); };
   img.src = url;
 }
+/* 裁切層狀態：s0＝剛好蓋滿圓圈的基準倍率，z＝使用者加的縮放（1–3），ox/oy＝圖左上角位移 */
+let crop = null;
+function cropApply(){
+  if (!crop) return;
+  const s = crop.s0 * crop.z;
+  /* 圖永遠要蓋滿整個圓圈：位移夾在邊界內 */
+  crop.ox = Math.min(0, Math.max(crop.V - crop.w * s, crop.ox));
+  crop.oy = Math.min(0, Math.max(crop.V - crop.h * s, crop.oy));
+  $('cropImg').style.transform = `translate(${crop.ox}px,${crop.oy}px) scale(${s})`;
+}
+/* 縮放時以 fx,fy（圓圈內座標）為錨點，指頭壓著的地方不會滑走 */
+function cropZoomTo(z2, fx, fy){
+  if (!crop) return;
+  z2 = Math.min(3, Math.max(1, z2));
+  const s1 = crop.s0 * crop.z, s2 = crop.s0 * z2;
+  crop.ox = fx - (fx - crop.ox) * (s2 / s1);
+  crop.oy = fy - (fy - crop.oy) * (s2 / s1);
+  crop.z = z2;
+  $('cropRange').value = Math.round((z2 - 1) / 2 * 100);
+  cropApply();
+}
+function openCrop(img, url, kid, done){
+  const lay = $('cropLay'), box = $('cropBox'), im = $('cropImg');
+  lay.classList.add('on');
+  const V = box.clientWidth;
+  const w = img.naturalWidth, h2 = img.naturalHeight;
+  if (!V || !w || !h2){ lay.classList.remove('on'); URL.revokeObjectURL(url); toast('這張照片處理不了'); return; }
+  im.src = url;
+  im.style.width = w + 'px'; im.style.height = h2 + 'px';
+  const s0 = V / Math.min(w, h2);
+  crop = { img, url, kid, done, V, w, h:h2, s0, z:1, ox:(V - w * s0) / 2, oy:(V - h2 * s0) / 2 };
+  $('cropRange').value = 0;
+  cropApply();
+}
+function closeCrop(){
+  if (!crop) return;
+  $('cropLay').classList.remove('on');
+  $('cropImg').src = '';
+  URL.revokeObjectURL(crop.url);
+  crop = null;
+}
+(() => {
+  const box = $('cropBox');
+  const pts = new Map();                    /* 目前按著的指頭：pointerId → {x,y} */
+  let pinch0 = 0, z0 = 1;                   /* 捏合起手時的兩指距離與當時倍率 */
+  box.addEventListener('pointerdown', e => {
+    if (!crop) return;
+    e.preventDefault();
+    try { box.setPointerCapture(e.pointerId); } catch (err) {}
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (pts.size === 2){
+      const [a, b] = [...pts.values()];
+      pinch0 = Math.hypot(a.x - b.x, a.y - b.y) || 1; z0 = crop.z;
+    }
+  });
+  box.addEventListener('pointermove', e => {
+    if (!crop || !pts.has(e.pointerId)) return;
+    const p = pts.get(e.pointerId);
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    const r = box.getBoundingClientRect();
+    if (pts.size === 1){                    /* 一指＝拖動 */
+      crop.ox += dx; crop.oy += dy; cropApply();
+    } else if (pts.size === 2){             /* 兩指＝捏合縮放，錨在兩指中點 */
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      cropZoomTo(z0 * (d / pinch0), mx, my);
+      crop.ox += dx / 2; crop.oy += dy / 2; cropApply();
+    }
+  });
+  const lift = e => { pts.delete(e.pointerId); };   /* 捏合放掉一指，剩下那指自然回到拖動 */
+  box.addEventListener('pointerup', lift);
+  box.addEventListener('pointercancel', lift);
+  /* 滑鼠滾輪（桌機預覽用）：對著游標縮放 */
+  box.addEventListener('wheel', e => {
+    if (!crop) return;
+    e.preventDefault();
+    const r = box.getBoundingClientRect();
+    cropZoomTo(crop.z * (e.deltaY < 0 ? 1.08 : 0.93), e.clientX - r.left, e.clientY - r.top);
+  }, { passive:false });
+  $('cropRange').addEventListener('input', () => {
+    if (!crop) return;
+    cropZoomTo(1 + $('cropRange').value / 100 * 2, crop.V / 2, crop.V / 2);
+  });
+  $('cropCancel').addEventListener('click', closeCrop);
+  $('cropOk').addEventListener('click', () => {
+    if (!crop) return;
+    try {
+      const S = 96, c = document.createElement('canvas'); c.width = S; c.height = S;
+      const g = c.getContext('2d');
+      const s = crop.s0 * crop.z;
+      g.drawImage(crop.img, -crop.ox / s, -crop.oy / s, crop.V / s, crop.V / s, 0, 0, S, S);
+      let d = c.toDataURL('image/jpeg', .82);
+      if (d.length > 60000) d = c.toDataURL('image/jpeg', .5);
+      crop.kid.photo = d; save(); renderKids();
+      if (crop.done) crop.done();
+      toast('頭像換好了', { ms:1500 });
+    } catch (e) { toast('這張照片處理不了'); }
+    closeCrop();
+  });
+})();
 
 /* Web Animations 小包裝：播完把最後一格寫進 inline style 再取消，避免 fill:forwards 疊一堆 */
 function anim(el, kf, o){
@@ -1171,28 +1281,21 @@ function renderHero(){
   if (!lastSaveOk) parts.push('⚠️ 尚未存檔');
   $('heroSub').textContent = parts.join(' ・ ');
 
-  /* 第二行：歷來累計（跨所有月份）。大數字是「現在有幾顆」，這一行是「一共蓋過幾顆」 */
+  /* 第二行：隨時看得到「總好棒」可以換幾顆（使用者拍板：可兌換數要常駐主畫面；
+     「一共蓋過／扣過」的歷史統計退到紀錄頁看）。大數字照舊是收集數，不因兌換變少 */
   const all = eventsOf(k.id);
   const totalPlus = all.filter(e => e.type === 'plus').length;
-  const totalMinus = all.filter(e => e.type === 'minus').length;
   const W = walletOf(k.id);
   const hasEcon = all.some(e => e.type === 'redeem' || e.type === 'adjust');
   const el = $('heroTotal'); el.textContent = '';
   let totalText = '';
   if (totalPlus || hasEcon){
-    if (hasEcon){
-      /* 用過兌換或調整之後，第二行的主角換成「總好棒」餘額；
-         大數字（收集）不因兌換變少——換掉的是可用數，不是做到的事 */
-      el.append('總好棒 ', h('b', { text:String(W) }), ' 顆可用 ・ 一共蓋過 ' + totalPlus + ' 顆');
-      totalText = `總好棒 ${W} 顆可用，一共蓋過 ${totalPlus} 顆`;
-      if (totalMinus){ el.append(` ・ 扣過 ${totalMinus}`); totalText += `，扣過 ${totalMinus} 顆`; }
-    } else {
-      const first = all.filter(e => e.type === 'plus').map(e => e.date).sort()[0];
+    el.append('總好棒 ', h('b', { text:String(W) }), ' 顆可以換');
+    totalText = `總好棒 ${W} 顆可以換`;
+    const first = all.filter(e => e.type === 'plus').map(e => e.date).sort()[0];
+    if (first){
       const fd = parseKey(first);
       const days = Math.floor((parseKey(todayKey()) - fd) / 864e5) + 1;
-      el.append('一共蓋過 ', h('b', { text:String(totalPlus) }), ' 顆');
-      totalText = `一共蓋過 ${totalPlus} 顆`;
-      if (totalMinus){ el.append(` ・ 扣過 ${totalMinus} 顆`); totalText += `，扣過 ${totalMinus} 顆`; }
       const tail = ` ・ 從 ${fd.getMonth()+1}/${fd.getDate()} 起第 ${days} 天`;
       el.append(tail); totalText += tail;
     }
@@ -2304,8 +2407,8 @@ function openRecords(keepPage){
   const plus = evs.filter(e => e.type==='plus').length, minus = evs.filter(e => e.type==='minus').length;
   bd.append(h('h2', {}, avaFace(kid, 26), ` ${kid.name} 的紀錄`));
   const redeems = evs.filter(e => e.type === 'redeem').length;
-  const hasEconR = redeems || evs.some(e => e.type === 'adjust');
-  bd.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}${redeems ? `，換過 ${redeems} 次東西` : ''}${hasEconR ? `，總好棒 ${walletOf(kid.id)} 顆可用` : ''}。點原因可以補寫或修改。` : `還沒有任何紀錄。今天找一件 ${kid.name} 做到的小事吧。` }));
+  /* 歷史統計的家：主畫面第二行只掛「總好棒可以換幾顆」，一共蓋過／扣過在這裡看 */
+  bd.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}${redeems ? `，換過 ${redeems} 次東西` : ''}，總好棒 ${walletOf(kid.id)} 顆可以換。點原因可以補寫或修改。` : `還沒有任何紀錄。今天找一件 ${kid.name} 做到的小事吧。` }));
   if (plus) bd.append(h('button', { class:'sbtn fill', style:'width:100%;margin-bottom:14px', text:`跟 ${kid.name} 一起看這週 ⭐`, onclick: openReview }));
   const groups = {};
   for (const e of evs){ (groups[e.date] = groups[e.date] || []).push(e); }
