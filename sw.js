@@ -5,13 +5,14 @@
    集章資料都在 localStorage，不經過這裡。 */
 'use strict';
 
-const VERSION = 'v1';
+const VERSION = 'v4';
 const PREFIX = 'good-job-stamps-';
 const CACHE = `${PREFIX}${VERSION}`;
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './manual.html',
   './icons/icon.svg',
   './icons/icon-180.png',
   './icons/icon-192.png',

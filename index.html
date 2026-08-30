@@ -59,10 +59,21 @@ svg{display:block}
 .kid.on .ava{transform:scale(1.12); border:3px solid var(--k-dark)}
 .kid.bounce .ava{animation:kidBounce .22s ease-out}
 @keyframes kidBounce{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1.12)}}
-.kid .nm{font-size:13px; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.kid .nm{font-size:14px; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .kid.on .nm{font-weight:700}
 .kid .bar{width:24px; height:4px; border-radius:2px; background:var(--accent-dark); opacity:0; transition:opacity .2s}
 .kid.on .bar{opacity:1}
+/* 四、五個孩子時縮小頭像 */
+.kids.n4 .ava{width:48px; height:48px; font-size:26px}
+.kids.n4 .nm{max-width:78px}
+.kids.n4 .nd{right:calc(50% - 27px)}
+.kids.n5 .ava{width:42px; height:42px; font-size:23px}
+.kids.n5 .nm{font-size:12px; max-width:62px}
+.kids.n5 .nd{right:calc(50% - 24px)}
+/* 設定頁次分頁 */
+.stabs{display:flex; gap:6px; margin:2px 0 14px; position:sticky; top:0; background:var(--card); padding:6px 0; z-index:3}
+.stab{flex:1; height:40px; border-radius:12px; border:1.5px solid rgba(0,0,0,.14); background:none; color:var(--ink); font-size:15px; font-weight:700}
+.stab.on{background:var(--accent-dark); border-color:var(--accent-dark); color:#fff}
 /* 今天還沒蓋章：右上角一個灰點（不是紅點） */
 .kid .nd{position:absolute; width:8px; height:8px; border-radius:50%; background:#B0B0B0; top:4px; right:calc(50% - 30px); display:none}
 .kid.nodot .nd{display:block}
@@ -79,20 +90,22 @@ svg{display:block}
 .dots{display:grid; grid-template-columns:repeat(5,8px); gap:4px}
 .dots i{width:8px; height:8px; border-radius:50%; border:1.5px solid var(--accent-dark); display:block; transition:background-color .2s}
 .dots i.on{background:var(--accent); border-color:var(--accent)}
-.hero-sub{font-size:13px; color:rgba(var(--ink-rgb),.78); margin-top:6px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hero-sub{font-size:14px; color:rgba(var(--ink-rgb),.78); margin-top:6px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* 歷來累計：跨過每一個月份，一共蓋過幾顆 */
-.hero-total{font-size:12px; color:rgba(var(--ink-rgb),.6); margin-top:3px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.hero-total b{font-weight:800; color:var(--accent-dark); font-size:13px}
+.hero-total{font-size:13px; color:rgba(var(--ink-rgb),.62); margin-top:3px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hero-total b{font-weight:800; color:var(--accent-dark); font-size:14px}
 
 /* ───────── 3. 月曆 ───────── */
-.cal{flex:2 1 auto; min-height:0; padding:0 16px; display:flex; flex-direction:column; justify-content:center}
-.cal-head{height:44px; display:flex; align-items:center; justify-content:space-between}
+/* 不可壓縮：螢幕不夠高時整頁改用捲動（#app overflow-y:auto），月曆最後一排不能被裁掉 */
+.cal{flex:2 0 auto; padding:0 16px; display:flex; flex-direction:column; justify-content:center; position:relative}
+.cal-head{height:44px; display:flex; align-items:center; justify-content:space-between; position:relative}
 .cal-head button{height:44px; border:0; background:none; font-size:26px; color:var(--accent-dark); padding:0; line-height:1}
 .cal-head .nav{width:44px}
 .cal-head .cal-title{font-size:18px; font-weight:700; color:var(--ink); flex:1}
-.wk{display:grid; grid-template-columns:repeat(7,1fr); font-size:12px; color:var(--dim); text-align:center; height:20px; align-items:center}
+.wk{display:grid; grid-template-columns:repeat(7,1fr); font-size:13px; color:var(--dim); text-align:center; height:20px; align-items:center}
 .grid-wrap{overflow:hidden}
-.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; touch-action:pan-y}
+/* pan-y 之外要留 pinch-zoom：老花讀者靠兩指放大，月曆正是最需要放大的地方 */
+.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; touch-action:pan-y pinch-zoom}
 .grid.slide-l{animation:slideL .2s ease-out}
 .grid.slide-r{animation:slideR .2s ease-out}
 @keyframes slideL{from{transform:translateX(40px);opacity:.3}to{transform:none;opacity:1}}
@@ -109,7 +122,8 @@ svg{display:block}
 .cell.blank{visibility:hidden}
 .cell.shake{animation:shake .3s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-.cell .d{position:absolute; top:4px; left:5px; font-size:11px; color:rgba(var(--ink-rgb),.72); line-height:1}
+/* 最小字級全域抬高一級：老花讀者不用開任何設定就看得到 */
+.cell .d{position:absolute; top:4px; left:5px; font-size:13px; color:rgba(var(--ink-rgb),.72); line-height:1}
 .cell.today .d{color:var(--ink); font-weight:800}
 .cell svg.s{position:absolute; transform:translate(-50%,-50%) rotate(var(--r,0deg)); --s-fill:var(--accent); --s-stroke:var(--accent-dark)}
 .cell svg.s.pop{animation:starPop .15s ease-out}
@@ -145,7 +159,7 @@ svg{display:block}
 .big svg{width:24px; height:24px; --s-fill:#fff; --s-stroke:rgba(0,0,0,.12)}
 
 /* ───────── 5. 家長小語 ───────── */
-.tip{flex:0 0 auto; min-height:52px; display:flex; align-items:center; gap:8px; padding:4px 16px 6px; font-size:13px; line-height:1.35; color:rgba(var(--ink-rgb),.8); background:none; border:0; width:100%; text-align:left}
+.tip{flex:0 0 auto; min-height:52px; display:flex; align-items:center; gap:8px; padding:4px 16px 6px; font-size:14px; line-height:1.4; color:rgba(var(--ink-rgb),.82); background:none; border:0; width:100%; text-align:left}
 .tip svg{width:16px; height:16px; flex:0 0 16px; color:var(--accent-dark)}
 /* 膠囊字很小，用深色文字而不是主題色，淺色主題下才讀得清楚 */
 .tip .pill{font-size:11px; padding:3px 8px; border-radius:10px; background:rgba(var(--accent-rgb),.3); color:var(--ink); white-space:nowrap; flex:0 0 auto; font-weight:700}
@@ -230,28 +244,28 @@ svg{display:block}
 .hide{display:none !important}
 
 #toast{
-  position:fixed; left:16px; right:16px; bottom:calc(156px + env(safe-area-inset-bottom)); background:#3A3A3A; color:#fff;
+  position:fixed; left:16px; right:16px; bottom:calc(156px + env(safe-area-inset-bottom) + var(--kb, 0px)); background:#3A3A3A; color:#fff;
   border-radius:14px; padding:10px 8px 10px 14px; font-size:14px; line-height:1.4; display:flex; align-items:center; gap:8px;
   opacity:0; transform:translateY(10px); transition:.2s; z-index:80; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.25);
 }
 :root{--kb:0px}
 #toast.on{opacity:1; transform:none}
 #toast span{flex:1; pointer-events:none}
-#toast button{margin-left:auto; background:none; border:0; color:#FFD36B; font-weight:700; font-size:15px; min-height:44px; min-width:56px; padding:0 8px; white-space:nowrap; pointer-events:auto}
-/* 原因面板開著時，toast 再往上讓一層，兩者不重疊 */
-#reasonPanel.on ~ #toast{bottom:calc(280px + env(safe-area-inset-bottom))}
+#toast button{margin-left:auto; background:none; border:1.5px solid rgba(255,211,107,.75); border-radius:12px; color:#FFD36B; font-weight:700; font-size:16px; min-height:44px; min-width:64px; padding:0 12px; white-space:nowrap; pointer-events:auto}
+/* 原因面板開著時，toast 改貼畫面頂端——面板會長高（還有誰也做了），別去猜它的高度 */
+#reasonPanel.on ~ #toast{bottom:auto; top:calc(env(safe-area-inset-top) + 8px)}
 
 .scrim{position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .2s; z-index:70}
 .scrim.on{opacity:1; pointer-events:auto}
 .sheet{
   position:fixed; left:0; right:0; bottom:var(--kb, 0px); background:var(--card); border-radius:20px 20px 0 0;
   transform:translateY(100%); transition:transform .24s cubic-bezier(.2,.8,.2,1); z-index:71;
-  max-height:88vh; max-height:88dvh; display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom);
+  max-height:88vh; max-height:calc(88dvh - var(--kb, 0px)); display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom);
   box-shadow:0 -6px 30px rgba(0,0,0,.15); will-change:transform;
 }
 .sheet.open{transform:none}
 .sheet.drag{transition:none}
-.sheet .hd{height:24px; display:grid; place-items:center; flex:0 0 24px; touch-action:none}
+.sheet .hd{height:36px; display:grid; place-items:center; flex:0 0 36px; touch-action:none; position:relative}
 .sheet .hd i{width:36px; height:4px; border-radius:2px; background:#ddd}
 .sheet .bd{overflow-y:auto; padding:4px 16px 20px; -webkit-overflow-scrolling:touch}
 .sheet h2{font-size:18px; font-weight:700; margin:4px 0 4px}
@@ -264,7 +278,7 @@ svg{display:block}
 .lnk{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; padding:0 4px; display:block; margin:6px 0 0 auto}
 .list{display:flex; flex-direction:column}
 .row{display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.06); min-height:52px}
-.row .tm{font-size:12px; color:var(--dim); flex:0 0 40px}
+.row .tm{font-size:13px; color:var(--dim); flex:0 0 44px}
 .row .ic{flex:0 0 22px; height:22px; display:grid; place-items:center}
 .row .ic svg{width:20px; height:20px; --s-fill:var(--accent); --s-stroke:var(--accent-dark)}
 .row .ic.m{color:var(--grey); font-size:18px; font-weight:700}
@@ -337,16 +351,54 @@ textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #dd
 #installHint .ih span{flex:1}
 #installHint .ih button{background:none; border:0; color:#fff; font-size:20px; width:44px; height:44px; padding:0; opacity:.85; flex:0 0 44px}
 
+/* ───────── 這一批改善的新元件 ───────── */
+.shx{position:absolute; right:6px; top:0; height:36px; min-width:64px; border:0; background:none; color:var(--dim); font-size:15px; font-weight:700; padding:0 10px}
+.shx::before{content:""; position:absolute; inset:-6px -4px}   /* 命中區擴到 44pt，視覺不變 */
+/* 錨在 cal-head 上（月曆內容是垂直置中的，錨在 .cal 會漂） */
+.backNow{position:absolute; top:100%; margin-top:4px; left:50%; transform:translateX(-50%); z-index:5; height:36px; padding:0 16px; border-radius:18px; border:1.5px solid var(--accent-dark); background:var(--card); color:var(--accent-dark); font-size:14px; font-weight:700; box-shadow:0 3px 10px rgba(0,0,0,.14)}
+.backNow::after{content:""; position:absolute; inset:-6px -8px}
+img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-align:-5px}
+.ava img.face{width:100%; height:100%; vertical-align:baseline}
+.stamp .semo{position:absolute; left:50%; bottom:9px; transform:translateX(-50%); width:26px; height:26px; border-radius:50%; background-size:cover; background-position:center; font-size:22px; line-height:26px; text-align:center}
+.seeRec{color:var(--accent-dark); font-weight:700}
+.sibs{display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap; font-size:15px; color:rgba(var(--ink-rgb),.8)}
+.sibs button{display:inline-flex; align-items:center; gap:4px; height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; font-size:15px; color:var(--ink)}
+.sibs button.done{background:var(--accent-dark); color:#fff; border-color:var(--accent-dark)}
+.rpfoot{display:flex; margin-top:2px}
+#rpUndo{background:none; border:0; color:var(--dim); font-size:14px; min-height:44px; padding:0 4px}
+/* 滿 10：十顆星星逐顆點亮清點 */
+#tenlay{position:fixed; inset:0; z-index:66; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition:opacity .2s}
+#tenlay.on{opacity:1}
+.tencard{background:var(--card); border-radius:22px; padding:20px 22px 16px; box-shadow:0 12px 44px rgba(0,0,0,.22); text-align:center; max-width:86vw}
+.tenstars{display:grid; grid-template-columns:repeat(5,36px); gap:10px; justify-content:center}
+.tenstars svg{width:36px; height:36px; opacity:.14}
+.tenstars svg.lit{opacity:1}
+.tenline{margin-top:12px; font-size:16px; font-weight:700; color:var(--accent-dark); min-height:45px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.tenstars svg, .rvrow svg{--s-fill:var(--accent); --s-stroke:var(--accent-dark)}
+/* 睡前一起看（孩子視角，唯讀） */
+#review{position:fixed; inset:0; z-index:74; background:var(--bg); display:none; flex-direction:column; padding:calc(env(safe-area-inset-top) + 12px) 22px calc(env(safe-area-inset-bottom) + 16px)}
+#review.on{display:flex}
+#review .shx{position:absolute; top:calc(env(safe-area-inset-top) + 10px); right:10px; height:44px}
+.rvhead{font-size:24px; font-weight:900; margin:10px 60px 14px 0; line-height:1.35}
+.rvlist{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column}
+.rvrow{display:flex; align-items:center; gap:14px; padding:10px 2px; background:none; border:0; text-align:left; color:var(--ink); border-bottom:1px solid rgba(var(--ink-rgb),.08)}
+.rvrow svg{width:38px; height:38px; flex:0 0 38px}
+.rvrow .t{font-size:19px; line-height:1.4}
+.rvrow .d{font-size:14px; color:rgba(var(--ink-rgb),.6); margin-top:2px}
+.rvfoot{font-size:15px; color:rgba(var(--ink-rgb),.7); padding-top:14px; line-height:1.5}
+/* 滿 100 收下後，金星飛進今天的格子 */
+.flygold{position:fixed; left:0; top:0; width:64px; height:64px; z-index:78; pointer-events:none; --s-fill:var(--gold); --s-stroke:var(--gold-dark); will-change:transform}
+
 /* 矮螢幕（iPhone SE 這種 667px 高）：每一區縮一點，剛好不用捲動 */
 @media (max-height: 700px){
-  .kids{flex-basis:78px}
+  .kids{flex-basis:74px}
   .kid .ava{width:50px; height:50px; font-size:28px}
-  .hero{flex-basis:84px}
-  .hero-num{font-size:48px}
-  .grid{gap:5px}
+  .hero{flex-basis:100px}
+  .hero-num{font-size:46px}
+  .grid{gap:4px}
   .actions{flex-basis:84px}
   .big{height:64px}
-  .tip{flex-basis:46px}
+  .tip{min-height:44px; font-size:13px}
 }
 @media (prefers-reduced-motion: reduce){
   .kid.bounce .ava, .grid.slide-l, .grid.slide-r, .cell.shake, .cell.flash, .cell svg.s.pop{animation:none}
@@ -391,6 +443,7 @@ textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #dd
       <button class="nav" id="prevM" aria-label="上個月">‹</button>
       <button class="cal-title" id="calTitle"></button>
       <button class="nav" id="nextM" aria-label="下個月">›</button>
+      <button class="backNow hide" id="backNow">回到這個月</button>
     </div>
     <div class="wk"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
     <div class="grid-wrap"><div class="grid" id="grid"></div></div>
@@ -398,7 +451,7 @@ textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #dd
 
   <div class="actions">
     <button class="rbtn" id="minusBtn" aria-label="扣除一顆">−</button>
-    <button class="big" id="bigBtn"><svg><use href="#star"/></svg><span>今天好棒！</span></button>
+    <button class="big" id="bigBtn"><svg><use href="#star"/></svg><span id="bigBtnTx">今天好棒！</span></button>
     <button class="rbtn" id="editBtn" aria-label="打開今天">✎</button>
   </div>
 
@@ -412,16 +465,25 @@ textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #dd
 <!-- 動畫層 -->
 <div id="stampLayer">
   <div class="flash" id="flash"></div>
-  <div class="stamp" id="stampEl"><svg><use href="#star"/></svg></div>
+  <div class="stamp" id="stampEl"><svg><use href="#star"/></svg><span class="semo" id="stampEmo"></span></div>
   <div id="stampTxt"><span class="st">你好棒！</span><span class="ft">你好棒！</span></div>
 </div>
 <canvas id="fx"></canvas>
 
 <div id="banner" role="status" aria-live="polite"><div class="rb"><div class="t1" id="bannerT1"></div><div class="t2" id="bannerT2"></div></div></div>
 
+<div id="tenlay" aria-hidden="true"><div class="tencard"><div class="tenstars" id="tenStars"></div><div class="tenline" id="tenLine"></div></div></div>
+
+<div id="review" role="dialog" aria-modal="true" aria-label="跟孩子一起看">
+  <button class="shx" id="rvClose">關閉</button>
+  <div class="rvhead" id="rvHead"></div>
+  <div class="rvlist" id="rvList"></div>
+  <div class="rvfoot" id="rvFoot"></div>
+</div>
+
 <div id="big" role="dialog" aria-modal="true" aria-labelledby="bigH1">
   <div class="who" id="bigWho"></div>
-  <button class="skip" id="bigSkip">先關起來</button>
+  <button class="skip" id="bigSkip">關閉</button>
   <div class="halo" id="bigHalo"></div>
   <svg class="bigstar" id="bigStar"><use href="#star"/></svg>
   <div class="h1" id="bigH1"></div>
@@ -429,19 +491,21 @@ textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #dd
   <button class="take" id="bigTake">收下 ⭐</button>
 </div>
 
-<div id="reasonPanel">
-  <div class="ttl"><span>加上原因？（可以不填）</span><button id="rpUndo">撤銷</button></div>
+<div id="reasonPanel" role="region" aria-label="蓋章後的選項">
+  <div class="ttl"><span aria-live="polite">加上原因？（可以不填）</span><button id="rpSkip">先跳過</button></div>
   <div class="chips row" id="rpChips"></div>
-  <div class="inrow hide" id="rpCustom"><input id="rpInput" placeholder="他做了什麼？" maxlength="40" enterkeyhint="done"><button id="rpSave">儲存</button></div>
+  <div class="inrow hide" id="rpCustom"><input id="rpInput" placeholder="做了什麼？" maxlength="40" enterkeyhint="done"><button id="rpSave">儲存</button></div>
+  <div class="sibs hide" id="rpSibs"></div>
+  <div class="rpfoot"><button id="rpUndo">蓋錯了，拿掉這顆</button></div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"><span id="toastTx"></span><button id="toastBtn" class="hide"></button></div>
 
 <div class="scrim" id="scrim"></div>
-<div class="sheet" id="daySheet" role="dialog" aria-modal="true" aria-label="這一天的紀錄"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="dayBd"></div></div>
-<div class="sheet" id="deductSheet" role="dialog" aria-modal="true" aria-label="扣除一顆"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="deductBd"></div></div>
-<div class="sheet" id="recordsSheet" role="dialog" aria-modal="true" aria-label="全部紀錄"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="recordsBd"></div></div>
-<div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="設定"><div class="hd" aria-hidden="true"><i></i></div><div class="bd" id="settingsBd"></div></div>
+<div class="sheet" id="daySheet" role="dialog" aria-modal="true" aria-label="這一天的紀錄"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="dayBd"></div></div>
+<div class="sheet" id="deductSheet" role="dialog" aria-modal="true" aria-label="扣除一顆"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="deductBd"></div></div>
+<div class="sheet" id="recordsSheet" role="dialog" aria-modal="true" aria-label="全部紀錄"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="recordsBd"></div></div>
+<div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="設定"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="settingsBd"></div></div>
 
 <script>
 'use strict';
@@ -467,8 +531,11 @@ const THEMES = [
   { name:'石墨藍', bg:'#EAEEF5', card:'#FFFFFF', accent:'#8296B8', accentDark:'#3F5273', ink:'#1B2436' },
 ];
 const EMOJIS = ['🦁','🦖','🚀','⚽️','🐳','🦊','🐻','🐯','🐰','🦄','🐱','🦋','🌸','🐥','🐼','🐨'];
-const REASONS = ['自己收玩具','幫忙做家事','跟兄弟姊妹分享','自己刷牙洗臉','好好吃飯','準時上床','寫完功課','說謝謝或對不起','有耐心等','勇敢試了一次'];
-const DEDUCT_REASONS = ['說好的沒做到','動手推人或打人','東西亂丟不收','對人沒禮貌'];
+/* 預設清單就是這個 app 的價值觀宣言：多放「過程與人際」，少放「配合大人」。
+   「好好吃飯」拿掉了——用獎勵換吃飯有實證上的反效果（孩子事後反而更不喜歡那樣食物）。 */
+const REASONS = ['自己收玩具','幫忙做家事','跟兄弟姊妹分享','自己刷牙洗臉','自己把碗收到水槽','準時上床','寫完功課','說謝謝或對不起','有耐心等','勇敢試了一次','跌倒自己站起來','等別人把話說完','安慰了難過的人'];
+/* 「動手打人」刻意不放：那需要當場處理和修補關係，用一顆星星記帳等於幫它標了價 */
+const DEDUCT_REASONS = ['說好的沒做到','東西亂丟不收','對人沒禮貌'];
 const TIPS = [
   ['找事實','多找出明確可以蓋好棒的事實給孩子正向回饋喔'],
   ['找事實','今天找一件他「做了」的事，不是「沒做錯」的事。'],
@@ -483,10 +550,16 @@ const TIPS = [
   ['扣之前','扣一顆之前先深呼吸，說清楚是哪一件事，不是他這個人。'],
   ['扣之前','如果這週扣的比蓋的多，先看看是不是標準定太高了。'],
   ['不比較','三個孩子的星星不用拿來比，各自跟昨天的自己比就好。'],
-  ['別當貨幣','星星是紀錄不是薪水；孩子開始問「這樣有幾顆」時，把話題拉回那件事本身。'],
+  ['別當貨幣','星星是紀錄不是薪水；孩子開口只剩「有幾顆、能換什麼」時，把話題拉回那件事本身。'],
+  ['別當貨幣','印章只能事後蓋。先說「收好就給你蓋」「蓋滿就讓你換」，星星就變成薪水了。'],
+  ['扣之前','有些事扣星星太便宜了——動手打人需要當場處理和修補，不是記一筆帳。'],
+  ['畢業','有一件事他天天做到、不用蓋也會做了？讓它畢業——它已經是他自己的了。'],
+  ['年齡','對還小的孩子，星星其實是蓋給你自己看的：當下的抱抱才算數。'],
+  ['年齡','大孩子嫌動畫幼稚？讓他自己按、自己寫原因，這本簿子就還是他的。'],
 ];
 const COPY_TEN = ['十顆星星，十件你做到的事。','一顆一顆蓋出來的，沒有一顆是白來的。','這十顆，每一顆都有一個故事。','又十顆了，你自己有發現嗎？'];
-const COPY_HUNDRED = ['〔名字〕，這是你一件一件做到的。','〔數字〕 件做到的事，我們都記得。','不是一天蓋的，是你一天一天做到的。'];
+/* 第二句不寫「N 件做到的事」：有扣除時淨值≠做到的件數，文案不能把餘額說成件數 */
+const COPY_HUNDRED = ['〔名字〕，這是你一件一件做到的。','〔數字〕 顆星星，每一顆後面都有一件真的事。','不是一天蓋的，是你一天一天做到的。'];
 const WD = ['日','一','二','三','四','五','六'];
 const KEY = 'haobang.v1';
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -527,6 +600,33 @@ function svgStar(cls, outline){
   s.append(u);
   return s;
 }
+/* 頭像：有照片用照片（96px 壓縮圖，約 4KB），沒有就用貼圖 emoji */
+function avaFace(kid, size){
+  if (kid.photo) return h('img', { class:'face', src:kid.photo, alt:'', style:`width:${size}px;height:${size}px` });
+  return h('span', { style:`font-size:${Math.round(size*.85)}px;line-height:1;vertical-align:-2px`, text:kid.emoji });
+}
+/* 把選來的照片裁成正方形、縮到 96px 存成 JPEG：三個孩子加起來十幾 KB，撞不到容量 */
+function setPhoto(kid, file, done){
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    try {
+      const S = 96, c = document.createElement('canvas'); c.width = S; c.height = S;
+      const g = c.getContext('2d');
+      const m = Math.min(img.naturalWidth, img.naturalHeight);
+      g.drawImage(img, (img.naturalWidth - m)/2, (img.naturalHeight - m)/2, m, m, 0, 0, S, S);
+      let d = c.toDataURL('image/jpeg', .82);
+      if (d.length > 60000) d = c.toDataURL('image/jpeg', .5);
+      kid.photo = d; save(); renderKids();
+      if (done) done();
+      toast('頭像換好了', { ms:1500 });
+    } catch (e) { toast('這張照片處理不了'); }
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('這張照片讀不進來'); };
+  img.src = url;
+}
+
 /* Web Animations 小包裝：播完把最後一格寫進 inline style 再取消，避免 fill:forwards 疊一堆 */
 function anim(el, kf, o){
   const opt = typeof o === 'number' ? { duration:o } : o;
@@ -554,9 +654,9 @@ function fresh(){
     },
     lastKid: 'k1', tipOrder: [], tipIndex: 0,
     kids: [
-      { id:'k1', name:'大寶', emoji:'🦁', theme:0, celebrated:[], recentReasons:[] },
-      { id:'k2', name:'二寶', emoji:'🐰', theme:1, celebrated:[], recentReasons:[] },
-      { id:'k3', name:'三寶', emoji:'🦄', theme:2, celebrated:[], recentReasons:[] },
+      /* 預設兩位；家裡不只兩個就用「＋新增一個孩子」，顏色會自動指派沒人用的主題 */
+      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[] },
+      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[] },
     ],
     events: [],
   };
@@ -584,36 +684,56 @@ function normalize(raw){
       customDeductReasons: strList(rawSet.customDeductReasons, 30, 40),
       hiddenDeductReasons: strList(rawSet.hiddenDeductReasons, 30, 40),
     },
-    lastKid: 'k1', tipOrder: [], tipIndex: 0, kids: [], events: [],
+    lastKid: null, tipOrder: [], tipIndex: 0, kids: [], events: [],
   };
 
-  const rawKids = (Array.isArray(raw.kids) && raw.kids.length === 3) ? raw.kids : base.kids;
-  /* id 一律由位置決定（k1/k2/k3）：備份裡若有重複或壞掉的 id，三個孩子會混在一起 */
-  s.kids = base.kids.map((d, i) => {
-    const k = (rawKids[i] && typeof rawKids[i] === 'object') ? rawKids[i] : {};
-    const emoji = Array.from(str(k.emoji, 16)).slice(0, 2).join('') || d.emoji;
-    /* 舊版把自訂原因存在各個孩子底下，這裡順手收攏到共用的那一份 */
-    strList(k.customReasons, 30, 40).forEach(r => {
-      if (!s.settings.customReasons.includes(r) && s.settings.customReasons.length < 40) s.settings.customReasons.push(r);
-    });
+  /* 孩子 1–5 個。id 保留備份裡原有的（k1、k2…）——移除中間的孩子時，
+     其他人的紀錄才不會張冠李戴；壞掉或重複的 id 才重發 */
+  let rawKids = (Array.isArray(raw.kids) ? raw.kids : []).filter(k => k && typeof k === 'object').slice(0, 5);
+  if (!rawKids.length) rawKids = base.kids;
+  /* 兩趟：先把「格式合法且不重複」的 id 全部登記，之後才替壞掉的重發——
+     一趟做完會讓前面壞掉的孩子偷走後面孩子的合法 id，事件整批張冠李戴 */
+  const usedIds = new Set();
+  const validId = k => (typeof k.id === 'string' && /^k\d{1,4}$/.test(k.id));
+  const dupCheck = new Set();
+  for (const k of rawKids){
+    if (validId(k) && !dupCheck.has(k.id)){ usedIds.add(k.id); }
+    if (validId(k)) dupCheck.add(k.id);
+  }
+  const claimed = new Set();
+  s.kids = rawKids.map((k, i) => {
+    /* 超出預設數的孩子（第 3 個起）不能回退到 base.kids 的循環，會撞成跟老大同名同頭像 */
+    const d = base.kids[i] || null;
+    const emoji = Array.from(str(k.emoji, 16)).slice(0, 2).join('') || (d ? d.emoji : ['🦊', '🐻', '🐥'][i % 3]);
+    let kidId = (validId(k) && usedIds.has(k.id) && !claimed.has(k.id)) ? k.id : null;
+    if (!kidId){ let nn = 1; while (usedIds.has('k' + nn) || claimed.has('k' + nn)) nn++; kidId = 'k' + nn; }
+    claimed.add(kidId);
     return {
-      id: 'k' + (i + 1),
-      name: (str(k.name, 12).trim()) || d.name,
+      id: kidId,
+      name: (str(k.name, 12).trim()) || (d ? d.name : `寶貝${i + 1}`),
       emoji,
-      theme: (Number.isInteger(k.theme) && k.theme >= 0 && k.theme < THEMES.length) ? k.theme : i,
+      /* 常用原因每個孩子各一份；舊備份只有全家共用的那份時，每個孩子先繼承它 */
+      customReasons: Array.isArray(k.customReasons) ? strList(k.customReasons, 30, 40) : [...s.settings.customReasons],
+      hiddenReasons: Array.isArray(k.hiddenReasons) ? strList(k.hiddenReasons, 30, 40) : [...s.settings.hiddenReasons],
+      customDeductReasons: Array.isArray(k.customDeductReasons) ? strList(k.customDeductReasons, 30, 40) : [...s.settings.customDeductReasons],
+      hiddenDeductReasons: Array.isArray(k.hiddenDeductReasons) ? strList(k.hiddenDeductReasons, 30, 40) : [...s.settings.hiddenDeductReasons],
+      /* 只收 base64 的點陣圖：SVG 或夾雜其他字元的 data URI 一律不收（防 CSS 注入） */
+      photo: (typeof k.photo === 'string' && k.photo.length <= 120000 && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(k.photo)) ? k.photo : null,
+      theme: (Number.isInteger(k.theme) && k.theme >= 0 && k.theme < THEMES.length) ? k.theme : i % THEMES.length,
       celebrated: (Array.isArray(k.celebrated) ? k.celebrated : [])
         .map(Number).filter(n => Number.isInteger(n) && n > 0 && n <= 1e6).slice(-500),
       recentReasons: strList(k.recentReasons, 60, 6),
     };
   });
 
+  const kidIds = new Set(s.kids.map(k => k.id));
   const ids = new Set();
   s.events = (Array.isArray(raw.events) ? raw.events : [])
     .filter(e => e && typeof e === 'object'
-      && ['plus', 'minus', 'gold'].includes(e.type)
+      && ['plus', 'minus', 'gold', 'adjust', 'redeem'].includes(e.type)
       && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '')
       && dkey(parseKey(e.date)) === e.date            /* 2026-02-30 這種不存在的日期擋掉 */
-      && ['k1', 'k2', 'k3'].includes(e.kid))
+      && kidIds.has(e.kid))
     .slice(0, 60000)
     .map((e, i) => {
       let ts = Number(e.ts);
@@ -622,11 +742,16 @@ function normalize(raw){
       while (ids.has(id)) id = id + '-' + i;          /* id 撞號會讓刪除／補原因動到錯的那一筆 */
       ids.add(id);
       const n = Number(e.n);
-      return { id, kid:e.kid, type:e.type, date:e.date, ts, reason: str(e.reason, 60),
-        ...(e.type === 'gold' && Number.isInteger(n) && n > 0 ? { n } : {}) };
-    });
+      const out = { id, kid:e.kid, type:e.type, date:e.date, ts, reason: str(e.reason, 60) };
+      if (e.type === 'gold' && Number.isInteger(n) && n > 0) out.n = n;
+      /* 超界的一律整筆丟棄，不改寫成別的數字——改寫會讓帳憑空生出可用數 */
+      if (e.type === 'redeem') out.n = (Number.isInteger(n) && n > 0 && n <= 100000) ? n : 0;
+      if (e.type === 'adjust') out.n = (Number.isInteger(n) && n !== 0 && Math.abs(n) <= 100000) ? n : 0;
+      return out;
+    })
+    .filter(e => (e.type !== 'adjust' || e.n !== 0) && (e.type !== 'redeem' || e.n > 0));
 
-  if (['k1', 'k2', 'k3'].includes(raw.lastKid)) s.lastKid = raw.lastKid;
+  s.lastKid = (typeof raw.lastKid === 'string' && kidIds.has(raw.lastKid)) ? raw.lastKid : s.kids[0].id;
   s.tipOrder = (Array.isArray(raw.tipOrder) ? raw.tipOrder : [])
     .filter(i => Number.isInteger(i) && i >= 0 && i < TIPS.length);
   s.tipIndex = Math.min(Math.max(0, Number(raw.tipIndex) || 0), s.tipOrder.length);
@@ -648,10 +773,13 @@ function load(){
   }
 }
 function save(){
+  /* 快照與雲端不依賴 localStorage，一定要排在 try 外面：
+     容量滿的那一刻，正是最需要備份還活著的一刻 */
+  scheduleSnapshot();
+  scheduleCloudSync();
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
     if (!lastSaveOk){ lastSaveOk = true; renderHero(); }
-    scheduleSnapshot();
   }
   catch (e) {
     /* 存不進去是最嚴重的狀況：畫面上星星都在、其實一關 app 就沒了。
@@ -672,6 +800,7 @@ const DB_NAME = 'good_job_stamps', STORE = 'snapshots';
 let dbPromise = null;
 function openDB(){
   if (dbPromise) return dbPromise;
+  let settledNull = false;
   dbPromise = new Promise(resolve => {
     try {
       const q = indexedDB.open(DB_NAME, 1);
@@ -683,9 +812,119 @@ function openDB(){
       q.onerror = () => resolve(null);
       setTimeout(() => resolve(null), 3000);
     } catch (e) { resolve(null); }
+  }).then(db => {
+    /* 開失敗（含逾時）不要把 null 永久快取住：下一次呼叫再試一次 */
+    if (!db && !settledNull){ settledNull = true; dbPromise = null; }
+    return db;
   });
   return dbPromise;
 }
+/* ───────── 雲端自動備份（GitHub Gist） ─────────
+   iPhone 上的網頁 app 進不了 iCloud，這是 Apple 不開放的；
+   做得到「自動」的路是傳到使用者自己的 GitHub 私人 Gist：
+   設定一次金鑰，之後每次改動 15 秒後自動上傳、切到背景時立刻上傳。
+   金鑰與 Gist 編號存在 localStorage 的另一把鑰匙下（不放進 state），
+   所以匯出的備份檔與上傳到雲端的內容都不會夾帶金鑰。 */
+const GKEY = KEY + '.gist';
+let gist = null;                    /* {token, gistId, lastSyncAt, lastError} */
+function loadGist(){ try { gist = JSON.parse(localStorage.getItem(GKEY) || 'null'); } catch (e) { gist = null; } }
+function saveGist(){ try { if (gist) localStorage.setItem(GKEY, JSON.stringify(gist)); else localStorage.removeItem(GKEY); } catch (e) {} }
+const cloudOn = () => !!(gist && gist.token);
+let cloudTimer = 0, cloudBusy = false, cloudPending = false;
+let pendingCloud = null;      /* 連線時發現兩邊都有資料：等使用者拍板前，凍結所有上傳 */
+/* gist.pending＝「還沒決定要用雲端還是本機」的持久旗標：
+   跟執行期的 pendingCloud 不同，關掉 app 再開它還在，凍結所有上傳直到使用者決定 */
+const cloudFrozen = () => pendingCloud || (gist && gist.pending);
+function scheduleCloudSync(){
+  if (!cloudOn() || cloudFrozen()) return;
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => { syncCloud().catch(() => {}); }, 15000);
+}
+async function syncCloud(force){
+  if (!cloudOn() || cloudFrozen()) return false;
+  if (cloudBusy){ cloudPending = true; return false; }
+  cloudBusy = true;
+  const g = gist;          /* 上傳途中被「中斷連線」清掉時，用這個別名安全收尾 */
+  let ok = false, retry404 = false;
+  try {
+    /* 上傳前先核對雲端指紋：上一次寫上去的版本戳（remoteStamp）跟現在雲端的不一樣，
+       表示有另一支裝置動過——自動上傳一律擋下，只有使用者親手按「立刻同步」才准覆蓋。
+       沒有這道門，舊手機光是被打開，15 秒後就會把幾個月前的資料靜默蓋掉雲端最新備份。 */
+    if (g.gistId && g.remoteStamp && !force){
+      const chk = await fetch('https://api.github.com/gists/' + g.gistId, {
+        headers: { Authorization: 'Bearer ' + g.token, Accept: 'application/vnd.github+json' },
+      });
+      if (chk.status === 404){ g.gistId = null; g.remoteStamp = null; }
+      else if (!chk.ok) throw new Error('GitHub 回應 ' + chk.status);
+      else {
+        const meta = await chk.json();
+        if (meta.updated_at && meta.updated_at !== g.remoteStamp){
+          throw new Error('雲端有另一支裝置的更新，先「從雲端拿回」或按「立刻同步」用這支覆蓋');
+        }
+      }
+    }
+    const files = { 'haobang-backup.json': { content: JSON.stringify(state, null, 1) } };
+    const url = g.gistId ? 'https://api.github.com/gists/' + g.gistId : 'https://api.github.com/gists';
+    const res = await fetch(url, {
+      method: g.gistId ? 'PATCH' : 'POST',
+      headers: { Authorization: 'Bearer ' + g.token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(g.gistId ? { files } : { description: '好棒印章備份（自動同步）', public: false, files }),
+    });
+    if (res.status === 404 && g.gistId){
+      /* 雲端那份被手動刪掉了：忘掉編號，讓控制流自然走出 try、等 finally 放完鎖，
+         函式最後一行才重試——在 try 裡直接遞迴或 return，重試不是並發就是根本跑不到 */
+      g.gistId = null; g.remoteStamp = null;
+      if (gist === g) saveGist();
+      retry404 = true;
+    } else {
+      if (res.status === 401 || res.status === 403) throw new Error('金鑰失效或被撤銷，請重新連線');
+      if (!res.ok) throw new Error('GitHub 回應 ' + res.status);
+      const j = await res.json();
+      g.gistId = j.id; g.remoteStamp = j.updated_at || null;
+      g.lastSyncAt = new Date().toISOString(); g.lastError = null;
+      if (gist === g){ saveGist(); ok = true; }     /* 途中被中斷連線就不落地也不宣稱成功 */
+    }
+  } catch (e) {
+    g.lastError = (e && e.message) ? e.message : '連不上（可能沒網路）';
+    if (gist === g) saveGist();
+  } finally {
+    cloudBusy = false;                              /* 任何路徑都要放手，不能讓同步永久卡死 */
+  }
+  if (retry404) return syncCloud(force);            /* 鎖已放乾淨，重試會自己重新上鎖 */
+  if (cloudPending){ cloudPending = false; scheduleCloudSync(); }
+  if (typeof renderKids === 'function') try { renderKids(); } catch (e) {}
+  return ok;
+}
+/* 沒網路時上傳會失敗，等網路回來自動補一次；切到背景是最好的上傳時機 */
+addEventListener('online', () => scheduleCloudSync());
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && cloudOn()){ clearTimeout(cloudTimer); syncCloud().catch(() => {}); }
+});
+/* 用金鑰在帳號裡找有沒有既有的備份 Gist（換手機時用） */
+async function findCloudBackup(token){
+  const res = await fetch('https://api.github.com/gists?per_page=100', {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+  });
+  if (res.status === 401 || res.status === 403) throw new Error('金鑰不對或沒有 gist 權限');
+  if (!res.ok) throw new Error('GitHub 回應 ' + res.status);
+  const list = await res.json();
+  return (Array.isArray(list) ? list : []).find(g => g.files && g.files['haobang-backup.json']) || null;
+}
+async function fetchCloudContent(){
+  if (!gist || !gist.gistId) return null;
+  const res = await fetch('https://api.github.com/gists/' + gist.gistId, {
+    headers: { Authorization: 'Bearer ' + gist.token, Accept: 'application/vnd.github+json' },
+  });
+  if (!res.ok) throw new Error('GitHub 回應 ' + res.status);
+  const j = await res.json();
+  /* 讀到哪個版本就記哪個版本的指紋：之後的自動上傳以它為基準判斷有沒有別人動過 */
+  if (gist && j.updated_at){ gist.remoteStamp = j.updated_at; saveGist(); }
+  const f = j.files && j.files['haobang-backup.json'];
+  if (!f) return null;
+  if (f.truncated && f.raw_url){ const r = await fetch(f.raw_url); return r.ok ? r.text() : null; }
+  return f.content || null;
+}
+
 let snapTimer = 0;
 function scheduleSnapshot(){
   clearTimeout(snapTimer);
@@ -745,7 +984,33 @@ async function pruneSnapshots(db){
 const kidById = id => state.kids.find(k => k.id === id);
 const cur = () => kidById(state.lastKid);
 const eventsOf = kid => state.events.filter(e => e.kid === kid);
-const netOf = kid => Math.max(0, eventsOf(kid).filter(e => e.type==='plus').length - eventsOf(kid).filter(e => e.type==='minus').length);
+/* 收集數：蓋章 − 扣除 ＋ 調整。月曆星星、進度點、滿 10/100 都看它。
+   兌換「不」動這個數——換掉的是可用餘額，孩子做到的事不會變少。 */
+const netOf = kid => {
+  let n = 0;
+  for (const e of eventsOf(kid)){
+    if (e.type === 'plus') n++;
+    else if (e.type === 'minus') n--;
+    else if (e.type === 'adjust') n += e.n || 0;
+  }
+  return Math.max(0, n);
+};
+/* 總好棒（可用餘額）＝ 收集數 − 已兌換 */
+const redeemedOf = kid => eventsOf(kid).filter(e => e.type === 'redeem').reduce((s, e) => s + (e.n || 0), 0);
+const walletOf = kid => Math.max(0, netOf(kid) - redeemedOf(kid));
+/* 手動調整：正數視為「以前就累積過的」，跨過的每個 10 直接記成已慶祝，不補放煙火 */
+function addAdjust(kidId, n, reason){
+  const kid = kidById(kidId);
+  n = Math.trunc(n);
+  if (!kid || !n || Math.abs(n) > 10000) return;    /* 上限跟 normalize 對齊，天文數字也不會凍住回填迴圈 */
+  const before = netOf(kidId);
+  state.events.push({ id:newId(), kid:kidId, type:'adjust', date:todayKey(), ts:Date.now(), reason:reason || '', n });
+  const after = netOf(kidId);
+  for (let m = Math.floor(before/10)*10 + 10; m <= after; m += 10){
+    if (!kid.celebrated.includes(m)) kid.celebrated.push(m);
+  }
+  save();
+}
 function monthStats(kid, y, m){
   const p = `${y}-${pad(m+1)}-`;
   const ev = eventsOf(kid).filter(e => e.date.startsWith(p));
@@ -758,37 +1023,38 @@ function dayMap(kid){
 }
 const stampedToday = kid => eventsOf(kid).some(e => e.type==='plus' && e.date === todayKey());
 function theme(kid){ return THEMES[kid.theme] || THEMES[0]; }
-/* 可以用的原因清單＝內建的（扣掉被隱藏的）＋ 自己加的 */
-function reasonPool(deduct){
-  const st = state.settings;
+/* 可以用的原因清單＝內建的（扣掉這個孩子收起來的）＋ 這個孩子自己加的。
+   每個孩子各一份：年紀不同，常做的事、會踩的雷本來就不一樣 */
+function reasonPool(kid, deduct){
   const base = deduct ? DEDUCT_REASONS : REASONS;
-  const hidden = deduct ? st.hiddenDeductReasons : st.hiddenReasons;
-  const custom = deduct ? st.customDeductReasons : st.customReasons;
+  const hidden = deduct ? kid.hiddenDeductReasons : kid.hiddenReasons;
+  const custom = deduct ? kid.customDeductReasons : kid.customReasons;
   return [...base.filter(r => !hidden.includes(r)), ...custom];
 }
-/* 這個孩子最近用過的排最前面：三個孩子年紀不同，常做的事本來就不一樣 */
+/* 這個孩子最近用過的排最前面 */
 function reasonChipsFor(kid){
-  const pool = reasonPool(false);
+  const pool = reasonPool(kid, false);
   const seen = new Set(); const out = [];
   for (const r of [...kid.recentReasons.filter(r => pool.includes(r)), ...pool]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
   return out;
 }
 function rememberReason(kid, r, deduct){
-  if (!r) return;
+  if (!r || !kid) return;
   if (!deduct) kid.recentReasons = [r, ...kid.recentReasons.filter(x => x !== r)].slice(0, 6);
-  const st = state.settings;
   const base = deduct ? DEDUCT_REASONS : REASONS;
-  const custom = deduct ? st.customDeductReasons : st.customReasons;
-  /* 手打過的原因自動變成常用選項，下次不用再打一次 */
+  const custom = deduct ? kid.customDeductReasons : kid.customReasons;
+  /* 手打過的原因自動變成這個孩子的常用選項 */
   if (!base.includes(r) && !custom.includes(r)){
     custom.push(r);
     if (custom.length > 40) custom.shift();
   }
 }
 
-/* 累積了一些紀錄、又超過 14 天沒把備份帶出這支手機，就該提醒了 */
+/* 累積了一些紀錄、又超過 14 天沒把備份帶出這支手機，就該提醒了。
+   雲端自動備份三天內有同步成功的話，就不用再唸。 */
 function backupOverdue(){
   if (state.events.length < 10) return false;
+  if (cloudOn() && gist.lastSyncAt && Date.now() - new Date(gist.lastSyncAt).getTime() < 3 * 864e5) return false;
   const lb = state.settings.lastBackupAt ? new Date(state.settings.lastBackupAt).getTime() : 0;
   return Date.now() - lb > 14 * 864e5;
 }
@@ -809,12 +1075,13 @@ function applyTheme(){
 /* ───────── 1. 孩子切換列 ───────── */
 function renderKids(){
   const host = $('kids'); host.textContent = '';
+  host.className = 'kids n' + state.kids.length;    /* 四、五個孩子時頭像縮一點才排得下 */
   for (const k of state.kids){
     const t = theme(k);
     const b = h('button', { class:'kid' + (k.id === state.lastKid ? ' on' : '') + (stampedToday(k.id) ? '' : ' nodot'),
       style:`--k-accent:${t.accent};--k-dark:${t.accentDark}`, 'aria-label':`切換到 ${k.name}`, 'aria-pressed': k.id === state.lastKid ? 'true' : 'false',
       onclick: () => switchKid(k.id) },
-      h('div', { class:'ava', text:k.emoji }), h('span', { class:'nd' }),
+      h('div', { class:'ava' }, k.photo ? h('img', { class:'face', src:k.photo, alt:'' }) : k.emoji), h('span', { class:'nd' }),
       h('div', { class:'nm', text:k.name }), h('div', { class:'bar' }));
     host.append(b);
   }
@@ -852,19 +1119,30 @@ function renderHero(){
   const all = eventsOf(k.id);
   const totalPlus = all.filter(e => e.type === 'plus').length;
   const totalMinus = all.filter(e => e.type === 'minus').length;
+  const W = walletOf(k.id);
+  const hasEcon = all.some(e => e.type === 'redeem' || e.type === 'adjust');
   const el = $('heroTotal'); el.textContent = '';
   let totalText = '';
-  if (totalPlus){
-    const first = all.filter(e => e.type === 'plus').map(e => e.date).sort()[0];
-    const fd = parseKey(first);
-    const days = Math.floor((parseKey(todayKey()) - fd) / 864e5) + 1;
-    el.append('一共蓋過 ', h('b', { text:String(totalPlus) }), ' 顆');
-    totalText = `一共蓋過 ${totalPlus} 顆`;
-    if (totalMinus){ el.append(` ・ 扣過 ${totalMinus} 顆`); totalText += `，扣過 ${totalMinus} 顆`; }
-    const tail = ` ・ 從 ${fd.getMonth()+1}/${fd.getDate()} 起第 ${days} 天`;
-    el.append(tail); totalText += tail;
+  if (totalPlus || hasEcon){
+    if (hasEcon){
+      /* 用過兌換或調整之後，第二行的主角換成「總好棒」餘額；
+         大數字（收集）不因兌換變少——換掉的是可用數，不是做到的事 */
+      el.append('總好棒 ', h('b', { text:String(W) }), ' 顆可用 ・ 一共蓋過 ' + totalPlus + ' 顆');
+      totalText = `總好棒 ${W} 顆可用，一共蓋過 ${totalPlus} 顆`;
+      if (totalMinus){ el.append(` ・ 扣過 ${totalMinus}`); totalText += `，扣過 ${totalMinus} 顆`; }
+    } else {
+      const first = all.filter(e => e.type === 'plus').map(e => e.date).sort()[0];
+      const fd = parseKey(first);
+      const days = Math.floor((parseKey(todayKey()) - fd) / 864e5) + 1;
+      el.append('一共蓋過 ', h('b', { text:String(totalPlus) }), ' 顆');
+      totalText = `一共蓋過 ${totalPlus} 顆`;
+      if (totalMinus){ el.append(` ・ 扣過 ${totalMinus} 顆`); totalText += `，扣過 ${totalMinus} 顆`; }
+      const tail = ` ・ 從 ${fd.getMonth()+1}/${fd.getDate()} 起第 ${days} 天`;
+      el.append(tail); totalText += tail;
+    }
+    el.append(' ・ ', h('span', { class:'seeRec', text:'紀錄 ›' }));
   } else {
-    el.textContent = '還沒有星星 —— 今天找一件他做到的小事';
+    el.textContent = `還沒有星星 —— 今天找一件 ${k.name} 做到的小事`;
     totalText = el.textContent;
   }
   /* aria-label 會蓋掉按鈕內的文字，所以要自己把數字唸出來，否則 VoiceOver 只會說「打開紀錄」 */
@@ -885,6 +1163,9 @@ function renderCalendar(){
     const key = `${view.y}-${pad(view.m+1)}-${pad(day)}`;
     grid.append(buildCell(key, day, map[key] || []));
   }
+  /* 滑到別的月份時，給一條看得見的路回來（點標題那個彩蛋沒人知道） */
+  const now = new Date();
+  $('backNow').classList.toggle('hide', view.y === now.getFullYear() && view.m === now.getMonth());
 }
 function buildCell(key, day, evs){
   const plus = evs.filter(e => e.type==='plus').length;
@@ -892,24 +1173,27 @@ function buildCell(key, day, evs){
   const gold = evs.some(e => e.type==='gold');
   const isToday = key === TODAY, future = key > TODAY;
   const cell = h('button', { class:'cell' + (plus ? ' has' : '') + (isToday ? ' today' : '') + (future ? ' future' : '') + (gold ? ' gold' : ''),
-    'data-date': key, 'aria-label': `${Number(key.slice(5,7))} 月 ${day} 日，${plus} 顆星星${minus ? `，${minus} 次扣除` : ''}`,
+    'data-date': key, 'aria-label': `${Number(key.slice(5,7))} 月 ${day} 日${isToday ? '，今天' : ''}，${plus} 顆星星${minus ? `，${minus} 次扣除` : ''}${gold ? '，有金色紀念章' : ''}`,
     onclick: () => onCellTap(key, cell) });
   cell.append(h('span', { class:'d', text:day }));
   if (isToday && plus === 0) cell.append(svgStar('o', true));
+  /* 5、6 顆也真的畫出來：孩子是用眼睛數星星的，最厲害的那天不該縮成一個小字 */
   const layouts = {
     1: [[50,56,24]],
     2: [[30,55,18],[70,60,18]],
     3: [[50,42,16],[32,72,16],[68,72,16]],
     4: [[35,45,14],[65,45,14],[35,75,14],[65,75,14]],
+    5: [[32,44,12],[68,44,12],[50,59,12],[32,75,12],[68,75,12]],
+    6: [[28,45,11],[50,42,11],[72,45,11],[28,75,11],[50,78,11],[72,75,11]],
   };
-  const lay = plus >= 5 ? [[50,56,24]] : (layouts[plus] || []);
+  const lay = plus >= 7 ? [[50,56,24]] : (layouts[plus] || []);
   lay.forEach(([x, y, sz], idx) => {
     const s = svgStar('s');
     const rot = (day*7 + idx*13) % 17 - 8;
     s.style.cssText = `left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;--r:${rot}deg`;
     cell.append(s);
   });
-  if (plus >= 5) cell.append(h('span', { class:'x', text:'×'+plus }));
+  if (plus >= 7) cell.append(h('span', { class:'x', text:'×'+plus }));
   if (gold){ const g = svgStar('g' + (minus ? ' withm' : '')); cell.append(g); }
   if (minus) cell.append(h('span', { class:'m', text:'−'+minus }));
   return cell;
@@ -917,7 +1201,14 @@ function buildCell(key, day, evs){
 function onCellTap(key, cell){
   /* 用當下算出來的今天，不用快取的 TODAY：app 開著跨過午夜時，新的一天不該被當成未來 */
   if (key > todayKey()){ cell.classList.remove('shake'); void cell.offsetWidth; cell.classList.add('shake'); return; }
-  openDay(key);
+  /* 孩子戳自己的星星，星星先跳一下回應他，再打開那一天 */
+  const stars = cell.querySelectorAll('svg.s');
+  if (stars.length){
+    const s = stars[stars.length-1];
+    s.classList.remove('pop'); void s.offsetWidth; s.classList.add('pop');
+    SFX.tick();
+    setTimeout(() => openDay(key), 280);
+  } else openDay(key);
 }
 function gotoMonth(dy, dir){
   view.m += dy;
@@ -928,6 +1219,7 @@ function gotoMonth(dy, dir){
 $('prevM').onclick = () => gotoMonth(-1, -1);
 $('nextM').onclick = () => gotoMonth(1, 1);
 $('calTitle').onclick = () => { const d = new Date(); const dir = (d.getFullYear()*12+d.getMonth()) - (view.y*12+view.m); view = { y:d.getFullYear(), m:d.getMonth() }; renderCalendar(); renderHero(); if (dir) { const g=$('grid'); g.classList.add(dir>0?'slide-l':'slide-r'); } };
+$('backNow').onclick = () => $('calTitle').click();
 /* 在格子區左右滑換月 */
 (() => {
   let sx = 0, sy = 0, on = false;
@@ -957,6 +1249,8 @@ $('tip').onclick = nextTip;
 function renderAll(){
   TODAY = todayKey();
   renderKids(); renderHero(); renderCalendar();
+  /* 大按鈕帶名字：在廚房蓋錯人時，按下去之前就看得到 */
+  $('bigBtnTx').textContent = cur().name + '好棒！';
   $('minusBtn').classList.toggle('dim', netOf(state.lastKid) === 0);
 }
 
@@ -1094,6 +1388,10 @@ const SFX = (() => {
     boom(){ if (!on()) return; const t = ctx.currentTime; noise(t, .25, 'lowpass', 400, 1); tone(80, t, .25, 'sine', 1); },
     minus(){ if (!on()) return; const t = ctx.currentTime; tone(N.G4, t, .15, 'sine', .22); tone(N.E4, t + .15, .18, 'sine', .22); },
     tick(){ if (!on()) return; const t = ctx.currentTime; noise(t, .02, 'highpass', 2000, .3); },
+    /* 滿 10 清點：一顆一階往上爬 */
+    step(i){ if (!on()) return; const t = ctx.currentTime; tone(523.25 * Math.pow(2, i/12), t, .1, 'sine', .3); },
+    /* 滿 100 按「收下」：高八度的金色琶音，尾音拉長 */
+    gold(){ if (!on()) return; const t = ctx.currentTime; [1046.5, 1318.5, 1568, 2093].forEach((f, i) => tone(f, t + i*.1, i === 3 ? .7 : .3, 'sine', .4)); },
   };
 })();
 /* iOS 只把 pointerup / touchend / click 算成「使用者手勢」，三個都掛，順手就好 */
@@ -1121,9 +1419,16 @@ $('toastBtn').onclick = () => {
 /* ───────── sheet 共用 ───────── */
 let openSheetId = null;
 function openSheet(id){
+  const already = openSheetId === id;
   if (openSheetId && openSheetId !== id) $(openSheetId).classList.remove('open');
   openSheetId = id; $('scrim').classList.add('on'); $(id).classList.add('open');
   hideReasonPanel();
+  /* 焦點帶進對話框，輔助科技才不會還停在被遮住的月曆上。
+     同一張面板重繪（設定頁點一下就重建）不再搶焦點，打字與 VoiceOver 才不會被打斷 */
+  if (!already){
+    const sx = $(id).querySelector('.shx');
+    if (sx) setTimeout(() => { try { sx.focus({ preventScroll:true }); } catch (e) {} }, 260);
+  }
 }
 function closeSheet(){
   if (!openSheetId) return;
@@ -1139,6 +1444,8 @@ document.querySelectorAll('.sheet .hd').forEach(hd => {
   /* 拖到一半被來電或系統手勢打斷時會收到 touchcancel，沒接的話 sheet 會卡在半空 */
   hd.addEventListener('touchcancel', () => { sheet.classList.remove('drag'); sheet.style.transform = ''; dy = 0; }, { passive:true });
 });
+/* 每張面板右上角都有一顆看得懂的「關閉」：拖把手勢不是人人都知道 */
+document.querySelectorAll('.sheet .shx').forEach(b => { b.onclick = closeSheet; });
 
 /* ───────── chips 元件：回傳 {el, value()} ───────── */
 function chipPicker(list, opt){
@@ -1147,7 +1454,7 @@ function chipPicker(list, opt){
   const wrap = h('div');
   const chips = h('div', { class:'chips' + (opt.row ? ' row' : '') });
   const custom = h('div', { class:'inrow hide' });
-  const input = h('input', { placeholder: opt.placeholder || '他做了什麼？', maxlength:'40', enterkeyhint:'done' });
+  const input = h('input', { placeholder: opt.placeholder || '做了什麼？', maxlength:'40', enterkeyhint:'done' });
   const saveBtn = h('button', { text:'儲存', onclick: () => { value = input.value.trim(); if (opt.onPick) opt.onPick(value, true); } });
   input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); saveBtn.click(); } });
   custom.append(input, saveBtn);
@@ -1175,16 +1482,34 @@ function addStamp(kidId, date, reason, quick){
   state.events.push(ev);
   if (reason) rememberReason(kidById(kidId), reason);
   save();
-  return { id:ev.id, kid:kidId, date, quick:!!quick, net:netOf(kidId) };
+  /* 動畫的大字是全 app 最大聲的一句話：有原因就唸出那件事（過程讚美），
+     沒原因就中性的「做到了」——名字＋事實，不做名字＋評價 */
+  const kid = kidById(kidId);
+  const label = reason ? `${kid.name}，${String(reason).trim()}！` : `${kid.name}，做到了！`;
+  return { id:ev.id, kid:kidId, date, quick:!!quick, net:netOf(kidId), label };
 }
 function removeEvent(id){
   const i = state.events.findIndex(e => e.id === id);
   if (i < 0) return false;
-  state.events.splice(i, 1); save(); return true;
+  const ev = state.events[i];
+  state.events.splice(i, 1);
+  /* 刪掉一筆正向調整（多半是按錯了在修正）：它當時靜默補進 celebrated 的滿 10
+     也要一併收回，不然孩子真的蓋到第 10 顆時，慶祝已被那次誤觸吃掉了 */
+  if (ev.type === 'adjust' && ev.n > 0){
+    const kid = kidById(ev.kid);
+    if (kid){
+      const after = netOf(ev.kid);
+      kid.celebrated = kid.celebrated.filter(m => !(m > after && m <= after + ev.n));
+    }
+  }
+  save(); return true;
 }
 
 /* ───────── 蓋章動畫（1250ms）＋佇列 ───────── */
 const Q = []; let playing = false; let lastQuick = null;
+/* 整份資料被換掉（還原快照/雲端/貼上）時，把排隊中的動畫與面板狀態全部清掉：
+   殘留的工單會對「還原後的資料」寫入不屬於它的里程碑 */
+function resetRuntime(){ Q.length = 0; lastQuick = null; rpJob = null; try { hideReasonPanel(); } catch (e) {} }
 function enqueue(job){ Q.push(job); if (!playing) runQueue(); }
 async function runQueue(){
   playing = true; let n = 0;
@@ -1196,9 +1521,13 @@ async function runQueue(){
       try { await playStamp(job, { fast: n > 0 }); }
       catch (err) { land(job); $('stampLayer').classList.remove('on'); }
       n++;
+      /* 這顆若在排隊期間被刪掉（或整份資料被還原），慶祝與里程碑都不能再算它的 */
+      if (!state.events.some(e => e.id === job.id)) continue;
       const kid = kidById(job.kid);
       const m = kid ? milestoneFor(kid, job.net) : null;
       if (m){
+        job.milestone = m;                          /* 記在工單上：撤銷時才知道「是這一顆觸發的」 */
+        if (job.batchRef) job.batchRef.celebrated.push(job.net);
         kid.celebrated.push(job.net); save();       /* 先記再播：播到一半關掉 app 也不會重播 */
         try {
           if (m === 'big') await celebrateHundred(kid, job.net);
@@ -1209,7 +1538,11 @@ async function runQueue(){
     }
   } finally {
     playing = false;
-    if (lastQuick){ showReasonPanel(lastQuick); lastQuick = null; }
+    /* 家長若在動畫期間開了別的面板，原因面板別鑽到遮罩底下變成點不到的鬼影 */
+    if (lastQuick){
+      if (!openSheetId && !$('review').classList.contains('on')) showReasonPanel(lastQuick);
+      lastQuick = null;
+    }
   }
 }
 function milestoneFor(kid, T){
@@ -1225,9 +1558,21 @@ function targetPoint(ev){
   return { x:r.left + r.width/2, y:r.top + r.height/2, cell:!!cell };
 }
 async function playStamp(ev, opt){
+  /* 批次蓋（「還有誰也做了」）：資料與里程碑照走，動畫只做一聲輕響 */
+  if (ev.mini){ SFX.chime(); land(ev); await wait(150); return; }
   const layer = $('stampLayer'), st = $('stampEl'), fl = $('flash'), tx = $('stampTxt'), app = $('app');
   const W = innerWidth, H = innerHeight, cx = W/2, cy = H*.42;
   const base = `translate(${cx-70}px,${cy-70}px)`;
+  const kid = kidById(ev.kid);
+  const label = ev.label || `${kid ? kid.name : ''}，做到了！`;
+  tx.querySelector('.st').textContent = label;
+  tx.querySelector('.ft').textContent = label;
+  /* 字級跟著長度連續縮：自訂原因最長 40 字，不能讓最大聲的一句話被螢幕裁掉頭尾 */
+  const n = Array.from(label).length;
+  tx.style.fontSize = Math.max(14, Math.min(34, Math.floor(innerWidth * .92 / Math.max(1, n)))) + 'px';
+  const emo = $('stampEmo');
+  if (kid && kid.photo){ emo.textContent = ''; emo.style.backgroundImage = `url(${kid.photo})`; }
+  else { emo.style.backgroundImage = ''; emo.textContent = kid ? kid.emoji : ''; }
   st.className = 'stamp'; st.style.opacity = '0'; st.style.transform = base; tx.style.opacity = '0'; fl.style.opacity = '0';
   tx.style.left = cx + 'px'; tx.style.top = (cy + 70 + 20) + 'px'; tx.style.transform = 'translate(-50%,0) scale(1)';
   layer.classList.add('on');
@@ -1239,27 +1584,44 @@ async function playStamp(ev, opt){
     land(ev); st.style.opacity = '0'; tx.style.opacity = '0';
     await wait(100); layer.classList.remove('on'); return;
   }
-  /* 0–180ms 印章落下 */
-  await anim(st, [{ transform:`translate(${cx-70}px,${cy-130}px) scale(1.6)`, opacity:0 }, { transform:`${base} scale(1)`, opacity:1 }], { duration: opt.fast ? 100 : 180, easing:'cubic-bezier(.5,0,1,.6)' });
-  /* 180–280ms 落地擠壓 + 閃光 + 粒子 + 啪 */
+  /* 預備一拍：印章先完整現身、微微上抬蓄力——孩子要先看到那顆要砸下來的東西，
+     衝擊才有重量。連蓋時縮短這一拍，但落下段永遠全速全重（第二顆不能比較不值錢）。 */
+  await anim(st, [
+    { transform:`translate(${cx-70}px,${cy-165}px) scale(1.08) rotate(-3deg)`, opacity:0 },
+    { transform:`translate(${cx-70}px,${cy-173}px) scale(1.1) rotate(-3deg)`, opacity:1 },
+  ], { duration: opt.fast ? 70 : 140, easing:'ease-out' });
+  await anim(st, [
+    { transform:`translate(${cx-70}px,${cy-173}px) scale(1.1) rotate(-3deg)`, opacity:1 },
+    { transform:`${base} scale(1) rotate(0deg)`, opacity:1 },
+  ], { duration:180, easing:'cubic-bezier(.5,0,1,.6)' });
+  /* 落地：方向性擠壓（垂直壓扁、水平擠寬），才像撞擊不像脈衝 */
   SFX.pop();
   fl.style.transform = `translate(${cx-100}px,${cy-100}px) scale(.2)`;
-  anim(fl, [{ transform:`translate(${cx-100}px,${cy-100}px) scale(.2)`, opacity:.35 }, { transform:`translate(${cx-100}px,${cy-100}px) scale(2.6)`, opacity:0 }], 280);
+  anim(fl, [{ transform:`translate(${cx-100}px,${cy-100}px) scale(.2)`, opacity:.35 }, { transform:`translate(${cx-100}px,${cy-100}px) scale(2.6)`, opacity:0 }], { duration:280, easing:'cubic-bezier(0,.6,.4,1)' });
   anim(app, [{ transform:'translateY(2px)' }, { transform:'none' }], 80);
   FX.burst(cx, cy);
-  await anim(st, [{ transform:`${base} scale(1)` }, { transform:`${base} scale(.9)`, offset:.43 }, { transform:`${base} scale(1.06)`, offset:.71 }, { transform:`${base} scale(1)` }], 140);
-  /* 260ms 「你好棒！」彈出 + 三連音 */
+  await anim(st, [
+    { transform:`${base} scale(1,1)` },
+    { transform:`${base} scale(1.14,.84)`, offset:.4 },
+    { transform:`${base} scale(.96,1.05)`, offset:.72 },
+    { transform:`${base} scale(1,1)` },
+  ], 150);
+  /* 大字彈出 + 三連音 */
   SFX.chime();
   anim(tx, [{ transform:'translate(-50%,0) scale(.5)', opacity:0 }, { transform:'translate(-50%,0) scale(1.1)', opacity:1, offset:.7 }, { transform:'translate(-50%,0) scale(1)', opacity:1 }], { duration:220, easing:'cubic-bezier(.34,1.56,.64,1)' });
-  await wait(380);
-  /* 700–1100ms 飛回格子 */
+  /* 連蓋時砍的是這段沒有資訊量的停留，不是落下的力道 */
+  await wait(opt.fast ? 170 : 380);
+  /* 飛回格子：走一道上弧、加速進場，落格才有「釘上去」的感覺 */
   const t = targetPoint(ev);
   anim(tx, [{ opacity:1 }, { opacity:0 }], 200);
-  await anim(st, [{ transform:`${base} scale(1)` }, { transform:`translate(${t.x-70}px,${t.y-70}px) scale(.22)` }], { duration:380, easing:'cubic-bezier(.4,0,.2,1)' });
+  await anim(st, [
+    { transform:`${base} scale(1)` },
+    { transform:`translate(${(cx + t.x)/2 - 70}px,${Math.min(cy, t.y) - 126}px) scale(.62)`, offset:.55 },
+    { transform:`translate(${t.x-70}px,${t.y-70}px) scale(.22)` },
+  ], { duration:400, easing:'cubic-bezier(.5,0,.9,.6)' });
   st.style.opacity = '0';
-  /* 1100–1250ms 落格 */
   land(ev);
-  await wait(150);
+  await wait(opt.fast ? 80 : 150);
   layer.classList.remove('on');
 }
 /* 動畫落地：重畫格子、新那顆星 pop、總數 bump、進度點 pop */
@@ -1280,30 +1642,64 @@ function land(ev){
 /* ───────── 小慶祝（滿 10） ───────── */
 function tapToSkip(ms){
   return new Promise(res => {
-    let done = false; const fin = () => { if (done) return; done = true; document.removeEventListener('pointerdown', fin, true); res(); };
+    let done = false;
+    const fin = e => {
+      if (done) return; done = true;
+      if (e){ e.preventDefault(); e.stopPropagation(); }   /* 跳過的那一下不能穿透去蓋章、開面板 */
+      document.removeEventListener('pointerdown', fin, true);
+      res();
+    };
     setTimeout(fin, ms); setTimeout(() => document.addEventListener('pointerdown', fin, true), 300);
   });
 }
 async function celebrateTen(kid, T){
+  /* 面板若正開著（例如剛按了「二寶也做了」），慶祝完要還回來——
+     不然第三個孩子跟撤銷就點不到了 */
+  const panelWasOpen = $('reasonPanel').classList.contains('on');
   hideReasonPanel();
   const b = $('banner');
-  $('bannerT1').textContent = `第 ${T} 顆星星！`;
+  $('bannerT1').textContent = `${kid.name}的第 ${T} 顆星星！`;
   $('bannerT2').textContent = pick(COPY_TEN);
-  SFX.ten(); FX.confettiSides(80);
   anim(b, [{ transform:'translateY(-120%)' }, { transform:'translateY(0)' }], { duration:300, easing:'cubic-bezier(.34,1.56,.64,1)' });
-  anim($('heroNum'), [{ transform:'scale(1)' }, { transform:'scale(1.6)', offset:.5 }, { transform:'scale(1.6)', offset:.75 }, { transform:'scale(1)' }], { duration:600, easing:'cubic-bezier(.34,1.56,.64,1)' });
-  const dots = $('dots');
-  await wait(150);
-  dots.querySelectorAll('i').forEach(i => i.classList.add('on'));
-  await wait(300);
-  dots.querySelectorAll('i').forEach(i => i.classList.remove('on'));
-  await tapToSkip(1550);
+  /* 十顆星星一顆一顆點亮：清點的不是數字，是那十件事——
+     有原因的順帶浮出那句原因。第十顆亮起，全場才炸開。 */
+  const lay = $('tenlay'), starsBox = $('tenStars'), line = $('tenLine');
+  starsBox.textContent = ''; line.textContent = '';
+  const slots = [];
+  for (let i = 0; i < 10; i++){ const s = svgStar(); starsBox.append(s); slots.push(s); }
+  const recent = eventsOf(kid.id).filter(e => e.type === 'plus').sort((a, b2) => a.ts - b2.ts).slice(-10);
+  lay.classList.add('on');
+  lay.setAttribute('aria-hidden', 'false');
+  lay.style.pointerEvents = 'auto';               /* 慶祝期間由這層滿版覆蓋接住點擊，跳過時才不會誤按到底下的按鈕 */
+  if (reduceMotion()){
+    slots.forEach(s => s.classList.add('lit'));
+    SFX.ten();                                    /* 減少動態 ≠ 靜音 */
+    await wait(1400);
+  } else {
+    for (let i = 0; i < 10; i++){
+      await wait(115);
+      slots[i].classList.add('lit');
+      anim(slots[i], [{ transform:'scale(.4)' }, { transform:'scale(1.35)', offset:.6 }, { transform:'scale(1)' }], 160);
+      SFX.step(i);
+      const r = recent[i] && recent[i].reason;
+      if (r) line.textContent = r;
+    }
+    SFX.ten(); FX.confettiSides(80);
+    /* 幫別的孩子（批次蓋）觸發的慶祝，不能放大「目前畫面上這個孩子」的總數 */
+    if (kid.id === state.lastKid) anim($('heroNum'), [{ transform:'scale(1)' }, { transform:'scale(1.6)', offset:.5 }, { transform:'scale(1.6)', offset:.75 }, { transform:'scale(1)' }], { duration:600, easing:'cubic-bezier(.34,1.56,.64,1)' });
+    await tapToSkip(1900);
+  }
+  lay.style.pointerEvents = '';
+  lay.classList.remove('on');
+  lay.setAttribute('aria-hidden', 'true');
   await anim(b, [{ transform:'translateY(0)' }, { transform:'translateY(-120%)' }], 200);
+  if (panelWasOpen && rpJob && state.events.some(e => e.id === rpJob.id)) showReasonPanel(rpJob);
 }
 
 /* ───────── 大慶祝（滿 100） ───────── */
 async function celebrateHundred(kid, T){
   closeSheet();                                   /* 動畫飛的那一秒家長順手開了紀錄頁，也不能擋住這一刻 */
+  const panelWasOpen = $('reasonPanel').classList.contains('on');
   hideReasonPanel();
   const big = $('big'), star = $('bigStar'), halo = $('bigHalo'), take = $('bigTake'), skip = $('bigSkip');
   const d = new Date();
@@ -1319,13 +1715,33 @@ async function celebrateHundred(kid, T){
   const close = async withGold => {
     if (closed) return; closed = true;
     if (withGold){
-      const r = take.getBoundingClientRect(); FX.burst(r.left + r.width/2, r.top + r.height/2, true);
+      const r = take.getBoundingClientRect(); const gx = r.left + r.width/2, gy = r.top + r.height/2;
+      SFX.gold();                                   /* 全 app 儀式感最重的動作，不能是無聲的 */
+      FX.burst(gx, gy, true);
       state.events.push({ id:newId(), kid:kid.id, type:'gold', date:todayKey(), ts:Date.now(), reason:'', n:T }); save();
-      await wait(350);
+      await wait(300);
+      big.style.opacity = '0'; await wait(250); big.classList.remove('on');
+      renderAll();
+      /* 讓孩子親眼看到自己收下的金星飛進今天的格子——儀式跟永久紀錄才連得起來 */
+      /* 只有畫面正顯示這個孩子時才飛：借別人的格子飛會變成視覺上說謊 */
+      const cell = kid.id === state.lastKid ? $('grid').querySelector(`[data-date="${todayKey()}"]`) : null;
+      if (cell && !reduceMotion()){
+        const cr = cell.getBoundingClientRect();
+        const fs = svgStar('flygold');
+        document.body.append(fs);
+        await anim(fs, [
+          { transform:`translate(${gx-32}px,${gy-32}px) scale(1.4)`, opacity:1 },
+          { transform:`translate(${cr.left + cr.width/2 - 32}px,${cr.top + cr.height/2 - 32}px) scale(.3)`, opacity:1 },
+        ], { duration:550, easing:'cubic-bezier(.5,0,.9,.6)' });
+        fs.remove();
+        cell.classList.add('flash'); setTimeout(() => cell.classList.remove('flash'), 250);
+      }
+    } else {
+      big.style.opacity = '0'; await wait(300); big.classList.remove('on');
+      renderAll();
     }
-    big.style.opacity = '0'; await wait(300); big.classList.remove('on');
-    renderAll();
-    toast(`${T} 顆了，要不要到設定頁備份一下？`, { ms:5000, action:'去備份', onAction: openSettings });
+    /* 備份提醒是行政事務，別踩進情感時刻——晚幾秒再說 */
+    setTimeout(() => toast(`${T} 顆了，要不要到設定頁備份一下？`, { ms:6000, action:'去備份', onAction: openSettings }), 9000);
     finish();
   };
   take.onclick = () => close(true);
@@ -1349,56 +1765,198 @@ async function celebrateHundred(kid, T){
   try { take.focus({ preventScroll:true }); } catch (err) {}
   setTimeout(() => { if (!closed) skip.classList.add('on'); }, 3000);
   await done;
+  if (panelWasOpen && rpJob && state.events.some(e => e.id === rpJob.id)) showReasonPanel(rpJob);
 }
 
 /* ───────── 原因面板（快速蓋章後） ───────── */
-let rpTimer = 0, rpEvent = null;
-function showReasonPanel(ev){
-  rpEvent = ev;
-  const kid = kidById(ev.kid);
+let rpTimer = 0, rpJob = null;
+function rpArm(){ clearTimeout(rpTimer); rpTimer = setTimeout(hideReasonPanel, 10000); }
+function showReasonPanel(job){
+  rpJob = job;
+  const kid = kidById(job.kid);
+  const nBatch = job.batchIds ? job.batchIds.length : 1;
+  $('reasonPanel').querySelector('.ttl span').textContent = nBatch > 1 ? `這 ${nBatch} 顆是因為什麼？（可以不填）` : '加上原因？（可以不填）';
+  $('rpUndo').textContent = nBatch > 1 ? `蓋錯了，拿掉這 ${nBatch} 顆` : '蓋錯了，拿掉這顆';
   const chips = $('rpChips'); chips.textContent = '';
   $('rpCustom').classList.add('hide'); $('rpInput').value = '';
-  const armTimer = () => { clearTimeout(rpTimer); rpTimer = setTimeout(hideReasonPanel, 6000); };
+  $('rpInput').placeholder = `${kid.name} 做了什麼？`;
+  $('rpSibs').classList.add('hide'); $('rpSibs').textContent = '';
+  $('rpSkip').textContent = '先跳過';
   for (const r of reasonChipsFor(kid)){
-    chips.append(h('button', { class:'chip', text:r, onclick: e => { e.currentTarget.classList.add('on'); setReason(ev, r); setTimeout(hideReasonPanel, 120); toast('⭐ ' + r, { ms:1200 }); } }));
+    chips.append(h('button', { class:'chip', text:r, 'aria-pressed':'false', onclick: e => {
+      chips.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+      e.currentTarget.classList.add('on');
+      e.currentTarget.setAttribute('aria-pressed', 'true');
+      setReason(job, r);
+      toast('⭐ ' + r, { ms:1200 });
+      showSibs(job, r); rpArm();
+    } }));
   }
   chips.append(h('button', { class:'chip', text:'其他…', onclick: () => { $('rpCustom').classList.remove('hide'); $('rpInput').focus(); clearTimeout(rpTimer); } }));
   $('reasonPanel').classList.add('on');
-  armTimer();
+  rpArm();
+}
+/* 選了原因之後才問「還有誰也做了？」——問的是事實，不是發福利 */
+function showSibs(job, reason){
+  if (state.kids.length < 2) return;              /* 只有一個孩子就沒有「還有誰」 */
+  const box = $('rpSibs'); box.textContent = '';
+  job.sibStamps = job.sibStamps || {};             /* 已幫誰蓋過要記住：重選原因重建面板時不能歸零，不然會重複蓋 */
+  box.append(h('span', { text:'這件事，還有誰也做了？' }));
+  for (const s of state.kids.filter(k => k.id !== job.kid)){
+    const already = !!job.sibStamps[s.id];
+    const b = h('button', { onclick: () => {
+      if (job.sibStamps[s.id]) return;
+      const sj = addStamp(s.id, job.date, reason, false);
+      job.sibStamps[s.id] = sj.id;
+      sj.mini = true; enqueue(sj);
+      b.classList.add('done'); b.disabled = true; b.textContent = `✓ ${s.name} 也蓋了`;
+      rpArm();
+    } }, avaFace(s, 20), ` ${s.name}`);
+    if (already){ b.classList.add('done'); b.disabled = true; b.textContent = `✓ ${s.name} 也蓋了`; }
+    box.append(b);
+  }
+  box.classList.remove('hide');
+  $('rpSkip').textContent = '完成';
 }
 function hideReasonPanel(){ clearTimeout(rpTimer); $('reasonPanel').classList.remove('on'); $('rpInput').blur(); }
-function setReason(ev, r){
-  const e = state.events.find(x => x.id === ev.id); if (!e) return;
-  e.reason = r; rememberReason(kidById(e.kid), r); save();
+function setReason(job, r){
+  const e = state.events.find(x => x.id === job.id); if (!e) return;
+  e.reason = r; rememberReason(kidById(e.kid), r);
+  /* 家長是「改選」原因：已經幫手足蓋出去的那幾筆也要跟著改，不能留舊原因 */
+  if (job.sibStamps){
+    for (const id of Object.values(job.sibStamps)){
+      const se = state.events.find(x => x.id === id);
+      if (se) se.reason = r;
+    }
+  }
+  /* 長按連蓋的整批：原因套到每一顆 */
+  if (job.batchIds){
+    for (const id of job.batchIds){
+      const be = state.events.find(x => x.id === id);
+      if (be) be.reason = r;
+    }
+  }
+  save();
 }
-$('rpSave').onclick = () => { const r = $('rpInput').value.trim(); if (rpEvent && r){ setReason(rpEvent, r); toast('⭐ ' + r, { ms:1200 }); } hideReasonPanel(); };
+$('rpSkip').onclick = hideReasonPanel;
+$('rpSave').onclick = () => {
+  const r = $('rpInput').value.trim();
+  if (rpJob && r){ setReason(rpJob, r); toast('⭐ ' + r, { ms:1200 }); $('rpCustom').classList.add('hide'); showSibs(rpJob, r); rpArm(); }
+  else hideReasonPanel();
+};
 $('rpInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('rpSave').click(); } });
 $('rpUndo').onclick = () => {
-  if (rpEvent && removeEvent(rpEvent.id)){
-    /* 撤銷的語意是「這一顆從來沒發生」：如果它剛好觸發了慶祝，
-       慶祝紀錄與那天的紀念章也要一起收回，孩子真的做到第 100 件事時才會再放一次煙火 */
-    const kid = kidById(rpEvent.kid);
-    if (kid && rpEvent.net && kid.celebrated[kid.celebrated.length - 1] === rpEvent.net){
+  if (!rpJob){ hideReasonPanel(); return; }
+  /* 長按連蓋的整批一起撤：每一顆都當作沒發生，這一輪跨過的慶祝與金章一併收回 */
+  if (rpJob.batchIds){
+    const kid = kidById(rpJob.kid);
+    let removed = 0;
+    for (const id of rpJob.batchIds){
+      const i = state.events.findIndex(e => e.id === id);
+      if (i >= 0){ state.events.splice(i, 1); removed++; }
+    }
+    if (removed && kid){
+      /* 只收回「這一批真的觸發過」的慶祝（工單上有記），不用數字區間去猜——
+         猜法會把歷史上早就慶祝過的里程碑一起刪掉，之後同一個滿 10 會重播 */
+      const cel = (rpJob.batchRef && rpJob.batchRef.celebrated) || [];
+      kid.celebrated = kid.celebrated.filter(m => !cel.includes(m));
+      state.events = state.events.filter(e => !(e.type === 'gold' && e.kid === kid.id && cel.includes(e.n) && e.ts >= (rpJob.batchFirstTs || 0)));
+      save(); renderAll(); toast(`已撤銷這 ${removed} 顆`);
+    }
+    hideReasonPanel(); return;
+  }
+  const orig = state.events.find(x => x.id === rpJob.id);
+  const origTs = orig ? orig.ts : Infinity;
+  if (orig && removeEvent(rpJob.id)){
+    /* 撤銷的語意是「這一顆從來沒發生」：只有「確定是這一顆觸發的」慶祝才收回
+       （看工單上的 milestone 旗標，不能用數字剛好相等去猜——
+       扣一顆再蓋回同一個數字時，猜法會誤刪幾個月前那顆真正的金星）。 */
+    const kid = kidById(rpJob.kid);
+    if (kid && rpJob.milestone && kid.celebrated[kid.celebrated.length - 1] === rpJob.net){
       kid.celebrated.pop();
-      const gi = state.events.findIndex(e => e.type === 'gold' && e.kid === kid.id && e.n === rpEvent.net);
-      if (gi >= 0) state.events.splice(gi, 1);
+      if (rpJob.milestone === 'big'){
+        const gi = state.events.findIndex(e => e.type === 'gold' && e.kid === kid.id && e.n === rpJob.net && e.ts >= origTs);
+        if (gi >= 0) state.events.splice(gi, 1);
+      }
     }
     save(); renderAll(); toast('已撤銷');
   }
   hideReasonPanel();
 };
+/* 面板內任何觸碰都重新計時：家長滑選項滑到一半、轉頭跟孩子講話，面板不該自己溜走。
+   focusin 也算（VoiceOver 的探索是 focus，不發 pointerdown） */
+$('reasonPanel').addEventListener('pointerdown', () => { if ($('reasonPanel').classList.contains('on')) rpArm(); });
+$('reasonPanel').addEventListener('focusin', () => { if ($('reasonPanel').classList.contains('on')) rpArm(); });
 document.addEventListener('pointerdown', e => {
   if ($('reasonPanel').classList.contains('on') && !$('reasonPanel').contains(e.target)) hideReasonPanel();
 }, true);
 
 /* ───────── 主按鈕：今天好棒！ ───────── */
+/* 大按鈕：點一下蓋一顆；按住不放（跟扣除同一種語彙）打開「一次蓋幾顆」 */
+let bigHoldTimer = 0, bigSuppress = false;
+$('bigBtn').addEventListener('pointerdown', () => {
+  clearTimeout(bigHoldTimer);
+  bigHoldTimer = setTimeout(() => { bigSuppress = true; SFX.tick(); openMulti(); }, 600);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => $('bigBtn').addEventListener(t, () => {
+  clearTimeout(bigHoldTimer);
+  /* 長按放開不一定會產生 click（手指飄移、click 落在剛升起的面板上）：
+     旗標要自己過期，不然下一次正常點擊會被無聲吞掉一顆 */
+  if (bigSuppress) setTimeout(() => { bigSuppress = false; }, 400);
+}));
+$('bigBtn').addEventListener('contextmenu', e => e.preventDefault());
 $('bigBtn').onclick = () => {
+  if (bigSuppress){ bigSuppress = false; return; }   /* 長按放開時的 click 不能又蓋一顆 */
   SFX.ensure();
   const job = addStamp(state.lastKid, todayKey(), '', true);
   const now = new Date();
   if (view.y !== now.getFullYear() || view.m !== now.getMonth()){ view = { y:now.getFullYear(), m:now.getMonth() }; renderCalendar(); }
   enqueue(job);
 };
+
+/* 一次蓋好幾顆：一件事做得很大，或晚上一次補記。
+   每一顆都是獨立的一筆（里程碑照算），選一次原因會套用到整批。 */
+function openMulti(){
+  const kid = cur(); const bd = $('deductBd'); bd.textContent = '';
+  $('deductSheet').setAttribute('aria-label', '一次蓋好幾顆');
+  bd.append(h('h2', {}, avaFace(kid, 24), ` 一次幫 ${kid.name} 蓋幾顆？`));
+  bd.append(h('p', { class:'sub', text:'一件事做得很大（像全家大掃除），或一次補記好幾件。之後選的原因會記在這一批的每一顆上。' }));
+  const quick = h('div', { class:'chips', style:'margin-bottom:10px' });
+  const cnt = h('input', { type:'number', inputmode:'numeric', placeholder:'幾顆？（最多 20）', min:'1', max:'20' });
+  for (const v of [2, 3, 4, 5]) quick.append(h('button', { class:'chip', text:String(v), onclick: () => { cnt.value = String(v); sync2(); } }));
+  bd.append(quick, h('div', { class:'inrow' }, cnt));
+  const goTx = h('span', { text:'蓋！' });
+  const go = h('button', { class:'pbtn' }, svgStar(), goTx);
+  const sync2 = () => {
+    const c = Math.trunc(Number(cnt.value)) || 0;
+    const okv = c >= 1 && c <= 20;
+    go.disabled = !okv; go.style.opacity = okv ? '' : '.5';
+    goTx.textContent = okv ? `蓋 ${c} 顆！` : '蓋！';
+  };
+  cnt.addEventListener('input', sync2); sync2();
+  go.onclick = () => {
+    const c = Math.trunc(Number(cnt.value));
+    if (c < 1 || c > 20) return;
+    closeSheet();
+    const now = new Date();
+    if (view.y !== now.getFullYear() || view.m !== now.getMonth()){ view = { y:now.getFullYear(), m:now.getMonth() }; renderCalendar(); }
+    const ids = [], jobs = [];
+    const baseNet = netOf(kid.id);
+    const firstTs = Date.now();
+    for (let i = 0; i < c; i++){
+      const j = addStamp(kid.id, todayKey(), '', i === c - 1);   /* 只有最後一顆帶出原因面板 */
+      ids.push(j.id); jobs.push(j);
+    }
+    const last = jobs[jobs.length - 1];
+    const batch = { celebrated: [] };               /* 這一批「真的觸發過」的慶祝記在這，撤銷時精準收回 */
+    jobs.forEach(j => { j.batchRef = batch; });
+    last.batchIds = ids; last.batchBaseNet = baseNet; last.batchFirstTs = firstTs;
+    setTimeout(() => jobs.forEach(enqueue), 260);               /* 等 sheet 收完再量格子座標 */
+  };
+  bd.append(go);
+  bd.append(h('button', { class:'lnk', text:'取消', onclick: closeSheet, style:'margin:6px auto 0' }));
+  openSheet('deductSheet');
+}
 $('editBtn').onclick = () => openDay(todayKey());
 $('hero').onclick = openRecords;
 
@@ -1412,7 +1970,7 @@ function openDay(key){
   bd.append(h('p', { class:'sub', text: plus || minus ? `${kid.name} 這天 ⭐ ${plus}${minus ? ` ・ 扣 ${minus}` : ''}` : `${kid.name} 這天還沒有蓋章` }));
   if (evs.length) bd.append(eventList(evs, () => openDay(key)));
   bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
-  const picker = chipPicker(reasonChipsFor(kid), { onPick: () => {} });
+  const picker = chipPicker(reasonChipsFor(kid), { placeholder:`${kid.name} 做了什麼？`, onPick: () => {} });
   bd.append(picker.el);
   const btn = h('button', { class:'pbtn', onclick: async () => {
     const reason = picker.value();
@@ -1439,12 +1997,17 @@ function eventList(evs, refresh){
     const row = h('div', { class:'row' });
     row.append(h('span', { class:'tm', text: (e.ts && Number.isFinite(tm.getTime())) ? `${pad(tm.getHours())}:${pad(tm.getMinutes())}` : '' }));
     const ic = h('span', { class:'ic' + (e.type === 'minus' ? ' m' : e.type === 'gold' ? ' g' : '') });
-    if (e.type === 'minus') ic.textContent = '−'; else ic.append(svgStar());
+    if (e.type === 'minus') ic.textContent = '−';
+    else if (e.type === 'redeem') ic.textContent = '🎁';
+    else if (e.type === 'adjust') ic.textContent = '✦';
+    else ic.append(svgStar());
     row.append(ic);
     if (e.type === 'gold'){ row.append(h('span', { class:'rs', text:`滿 ${e.n || 100} 顆的紀念章` })); }
+    else if (e.type === 'redeem'){ row.append(h('span', { class:'rs', text:`🎁 換了：${e.reason || '（沒寫品項）'} ・ 用掉 ${e.n} 顆` })); }
+    else if (e.type === 'adjust'){ row.append(h('span', { class:'rs', text:`調整總好棒 ${e.n > 0 ? '+' : ''}${e.n}${e.reason ? '：' + e.reason : ''}` })); }
     else {
       const rs = h('button', { class:'rs' + (e.reason ? '' : ' empty'), text: e.reason || '沒寫原因，點一下補', onclick: () => {
-        const inp = h('input', { value:e.reason, placeholder:'他做了什麼？', maxlength:'40', enterkeyhint:'done' });
+        const inp = h('input', { value:e.reason, placeholder:`${kidById(e.kid).name} 做了什麼？`, maxlength:'40', enterkeyhint:'done' });
         const sv = h('button', { text:'儲存', onclick: () => { e.reason = inp.value.trim(); rememberReason(kidById(e.kid), e.reason, e.type === 'minus'); save(); refresh(); } });
         inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); sv.click(); } });
         const wrap = h('div', { class:'inrow', style:'flex:1;margin:0' }, inp, sv);
@@ -1466,27 +2029,43 @@ function eventList(evs, refresh){
 /* ───────── 扣除 sheet（長按 600ms） ───────── */
 function openDeduct(key){
   const kid = cur(); const bd = $('deductBd'); bd.textContent = '';
+  $('deductSheet').setAttribute('aria-label', '扣除一顆');
   const n = netOf(kid.id);
   const d = parseKey(key); const isToday = key === TODAY;
   bd.append(h('h2', { text:`要扣掉 ${kid.name} 的一顆星星嗎？` + (isToday ? '' : `（${d.getMonth()+1} 月 ${d.getDate()} 日）`) }));
   const tipsBefore = TIPS.filter(t => t[0] === '扣之前');
   bd.append(h('p', { class:'sub', text: pick(tipsBefore)[1] }));
-  if (eventsOf(kid.id).some(e => e.type === 'minus' && e.date === key)) bd.append(h('p', { class:'sub warn', text:'這天已經扣過一顆了。再扣之前，先想想他知不知道是哪件事。' }));
+  if (eventsOf(kid.id).some(e => e.type === 'minus' && e.date === key)) bd.append(h('p', { class:'sub warn', text:`這天已經扣過一顆了。再扣之前，先想想 ${kid.name} 知不知道是哪件事。` }));
   if (n === 0){
     bd.append(h('p', { class:'sub', text:`${kid.name} 現在是 0 顆，沒有可以扣的星星。` }));
     bd.append(h('button', { class:'pbtn', text:'知道了', onclick: closeSheet }));
+    /* 兌換紀錄的入口不能因為 0 顆就消失（要看紀錄、刪誤兌換都靠它） */
+    bd.append(h('button', { class:'lnk', text:'🎁 看兌換紀錄', onclick: openRedeem, style:'margin:8px auto 0' }));
     openSheet('deductSheet'); return;
   }
   bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
-  const picker = chipPicker(reasonPool(true), { grey:true, placeholder:'發生了什麼事？' });
+  const picker = chipPicker(reasonPool(kid, true), { grey:true, placeholder:'發生了什麼事？' });
   bd.append(picker.el);
-  const hold = h('button', { class:'hold' }, h('div', { class:'fill' }), h('span', { text:'按住不放才會扣' }));
-  let timer = 0, pid = null;
-  const reset = () => { clearTimeout(timer); timer = 0; hold.classList.remove('holding'); pid = null; };
+  const holdTx = h('span', { text:'按住不放才會扣' });
+  const hold = h('button', { class:'hold' }, h('div', { class:'fill' }), holdTx);
+  let timer = 0, pid = null, hintTimer = 0;
+  /* 長按是「深思熟慮的摩擦」，不是手指靈巧度測驗：
+     中途放棄時要說一句為什麼沒扣成，不能默默歸零讓人以為壞了 */
+  const reset = showHint => {
+    const wasHolding = !!timer;
+    clearTimeout(timer); timer = 0; hold.classList.remove('holding'); pid = null;
+    if (showHint && wasHolding){
+      clearTimeout(hintTimer);
+      holdTx.textContent = '要按住不放，默數一秒才會扣喔';
+      hintTimer = setTimeout(() => { holdTx.textContent = '按住不放才會扣'; }, 1800);
+    }
+  };
   hold.addEventListener('pointerdown', e => {
     if (timer) return; pid = e.pointerId; hold.classList.add('holding');
+    /* 抓住 pointer：滑鼠/觸控板才不會一出邊界 1px 就觸發 pointerleave，讓 28px 容差失效 */
+    try { hold.setPointerCapture(e.pointerId); } catch (err) {}
     timer = setTimeout(() => {
-      reset();
+      reset(false);
       const reason = picker.value();
       state.events.push({ id:newId(), kid:kid.id, type:'minus', date:key, ts:Date.now(), reason });
       rememberReason(kid, reason, true); save();
@@ -1494,17 +2073,82 @@ function openDeduct(key){
       deductFeedback(kid.id, key);
     }, 600);
   });
-  ['pointerup','pointercancel','pointerleave'].forEach(t => hold.addEventListener(t, e => { if (pid !== null && e.pointerId === pid) reset(); }));
-  /* 觸控會隱含 pointer capture，手指滑出按鈕不會發 pointerleave；
-     沒有這一段的話，「按下去又改變主意滑開」還是照扣。 */
+  ['pointerup','pointercancel','pointerleave'].forEach(t => hold.addEventListener(t, e => { if (pid !== null && e.pointerId === pid) reset(true); }));
+  /* 觸控有隱含 pointer capture，滑出按鈕不會發 pointerleave，要自己判界。
+     邊界向外放 28px 容差：會抖的手不該被判定成「放棄」。 */
   hold.addEventListener('pointermove', e => {
     if (pid === null || e.pointerId !== pid) return;
-    const r = hold.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) reset();
+    const r = hold.getBoundingClientRect(), m = 28;
+    if (e.clientX < r.left - m || e.clientX > r.right + m || e.clientY < r.top - m || e.clientY > r.bottom + m) reset(true);
   });
   hold.addEventListener('contextmenu', e => e.preventDefault());
   bd.append(hold);
-  bd.append(h('button', { class:'lnk', text:'取消', onclick: closeSheet, style:'margin:4px auto 0' }));
+  const foot = h('div', { style:'display:flex; justify-content:space-between; align-items:center' });
+  foot.append(h('button', { class:'lnk', text:'🎁 用好棒換東西', style:'margin:0', onclick: openRedeem }));
+  foot.append(h('button', { class:'lnk', text:'取消', style:'margin:0', onclick: closeSheet }));
+  bd.append(foot);
+  openSheet('deductSheet');
+}
+
+/* ───────── 兌換 ─────────
+   換掉的是「總好棒」的可用數；蓋過的星星、月曆、慶祝都不會變。
+   要不要用星星換東西由每個家庭自己決定——app 只把帳記清楚。 */
+function openRedeem(){
+  const kid = cur(); const bd = $('deductBd'); bd.textContent = '';
+  $('deductSheet').setAttribute('aria-label', '用好棒換東西');   /* 借扣除的容器，但別讓 VoiceOver 把換禮物唸成扣星星 */
+  const W = walletOf(kid.id);
+  bd.append(h('h2', {}, avaFace(kid, 24), ' 用好棒換東西'));
+  bd.append(h('p', { class:'sub', text:`${kid.name} 存下來的好棒有 ${W} 顆可以用。用掉之後，做到的事都還在——月曆上的星星、慶祝，一顆都不會少。` }));
+  const item = h('input', { placeholder:'換什麼？例如：樂高小車', maxlength:'30', enterkeyhint:'next' });
+  bd.append(h('div', { class:'inrow', style:'margin-top:4px' }, item));
+  const cost = h('input', { type:'number', inputmode:'numeric', placeholder:'要用掉幾顆？', min:'1' });
+  bd.append(h('div', { class:'inrow' }, cost));
+  const quick = h('div', { class:'chips', style:'margin-top:10px' });
+  for (const v of [10, 20, 30, 50, 100]) quick.append(h('button', { class:'chip', text:String(v), onclick: () => { cost.value = String(v); sync(); } }));
+  bd.append(quick);
+  /* 兌換是安靜的帳務動作：不加驚嘆號，興奮留給「做到了！」 */
+  const go = h('button', { class:'pbtn', text:'換' });
+  const sync = () => {
+    const c = Math.trunc(Number(cost.value)) || 0;
+    const okv = item.value.trim() && c >= 1 && c <= W && c <= 100000;
+    go.disabled = !okv;
+    go.style.opacity = okv ? '' : '.5';
+    go.textContent = c >= 1 ? `換（用掉 ${c} 顆）` : '換';
+    if (c > W) go.textContent = `還差 ${c - W} 顆（現在可以用 ${W} 顆）`;
+  };
+  item.addEventListener('input', sync); cost.addEventListener('input', sync); sync();
+  go.onclick = () => {
+    const c = Math.trunc(Number(cost.value)); const it = item.value.trim();
+    if (!it || c < 1 || c > W) return;
+    const ev = { id:newId(), kid:kid.id, type:'redeem', date:todayKey(), ts:Date.now(), reason:it, n:c };
+    state.events.push(ev); save();
+    closeSheet(); renderAll();
+    SFX.tick();      /* 換東西只給一聲輕響：紙花與音樂留給做到的事 */
+    toast(`🎁 換到了：${it}（用掉 ${c} 顆，星星都還在）`, { ms:6000, action:'復原', onAction: () => { if (removeEvent(ev.id)){ renderAll(); toast('已復原'); } } });
+  };
+  bd.append(go);
+  /* 兌換紀錄 */
+  const past = eventsOf(kid.id).filter(e => e.type === 'redeem').sort((a, b) => b.ts - a.ts);
+  if (past.length){
+    bd.append(h('div', { class:'sec', text:'換過的東西' }));
+    const list = h('div', { class:'list' });
+    for (const e of past){
+      const d = parseKey(e.date);
+      const row = h('div', { class:'row' });
+      row.append(h('span', { class:'tm', text:`${d.getMonth()+1}/${d.getDate()}` }));
+      row.append(h('span', { class:'ic', text:'🎁' }));
+      row.append(h('span', { class:'rs', text:`${e.reason || '（沒寫品項）'} ・ 用掉 ${e.n} 顆` }));
+      let armed = 0;
+      const del = h('button', { class:'del', text:'刪除', onclick: () => {
+        if (!armed){ armed = 1; del.textContent = '確定刪除'; del.classList.add('arm'); setTimeout(() => { armed = 0; del.textContent = '刪除'; del.classList.remove('arm'); }, 3000); return; }
+        removeEvent(e.id); renderAll(); openRedeem();
+      } });
+      row.append(del);
+      list.append(row);
+    }
+    bd.append(list);
+  }
+  bd.append(h('button', { class:'lnk', text:'關閉', onclick: closeSheet, style:'margin:8px auto 0' }));
   openSheet('deductSheet');
 }
 function deductFeedback(kidId, key){
@@ -1525,13 +2169,20 @@ $('minusBtn').onclick = () => {
    一次只畫 40 天，其餘按「載入更早的」再補：
    累積兩三年之後一口氣建幾千列，iPhone 會整個卡住。 */
 let recordsDays = 40;
+let reasonEditKidId = null;      /* 設定頁「常用原因」目前在編輯哪個孩子 */
+let settingsTab = 'kids';        /* 設定頁目前的次分頁 */
+let lastSettingsTab = null;
+let lastSnapCount = 0;           /* 快照清單上次的筆數：重繪時先佔位，版面不跳 */
 function openRecords(keepPage){
   if (!keepPage) recordsDays = 40;
   const kid = cur(); const bd = $('recordsBd'); bd.textContent = '';
   const evs = eventsOf(kid.id).slice().sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts);
   const plus = evs.filter(e => e.type==='plus').length, minus = evs.filter(e => e.type==='minus').length;
-  bd.append(h('h2', { text:`${kid.emoji} ${kid.name} 的紀錄` }));
-  bd.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}。點原因可以補寫或修改。` : '還沒有任何紀錄。今天找一件他做到的小事吧。' }));
+  bd.append(h('h2', {}, avaFace(kid, 26), ` ${kid.name} 的紀錄`));
+  const redeems = evs.filter(e => e.type === 'redeem').length;
+  const hasEconR = redeems || evs.some(e => e.type === 'adjust');
+  bd.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}${redeems ? `，換過 ${redeems} 次東西` : ''}${hasEconR ? `，總好棒 ${walletOf(kid.id)} 顆可用` : ''}。點原因可以補寫或修改。` : `還沒有任何紀錄。今天找一件 ${kid.name} 做到的小事吧。` }));
+  if (plus) bd.append(h('button', { class:'sbtn fill', style:'width:100%;margin-bottom:14px', text:`跟 ${kid.name} 一起看這週 ⭐`, onclick: openReview }));
   const groups = {};
   for (const e of evs){ (groups[e.date] = groups[e.date] || []).push(e); }
   const dates = Object.keys(groups);
@@ -1546,25 +2197,132 @@ function openRecords(keepPage){
       text:`載入更早的紀錄（還有 ${dates.length - shown.length} 天）`,
       onclick: () => { recordsDays += 60; openRecords(true); } }));
   }
+  /* 做過的事：照時間排、放在最底——這面鏡子照的是家長自己注意到了什麼，
+     不照次數排，免得變成行為排行榜 */
+  if (plus){
+    const byReason = new Map();
+    for (const e of evs){
+      if (e.type !== 'plus') continue;
+      const r = e.reason || '';
+      const v = byReason.get(r) || { n:0, last:0 };
+      v.n++; v.last = Math.max(v.last, e.ts); byReason.set(r, v);
+    }
+    const noR = byReason.get('') || null; byReason.delete('');
+    const rows = [...byReason.entries()].sort((a, b) => b[1].last - a[1].last).slice(0, 12);
+    if (rows.length){
+      bd.append(h('div', { class:'dgrp', style:'margin-top:24px', text:'做過的事（照時間排，不是排行榜）' }));
+      bd.append(h('p', { class:'sub', text:'這份清單也照出你最常注意到什麼。' }));
+      const box = h('div', { class:'chips' });
+      const tag = t => h('span', { class:'chip', style:'display:inline-flex;align-items:center;pointer-events:none', text:t });
+      for (const [r, v] of rows) box.append(tag(`${r} ×${v.n}`));
+      if (noR) box.append(h('span', { class:'chip grey', style:'display:inline-flex;align-items:center;pointer-events:none', text:`沒寫原因 ×${noR.n}` }));
+      bd.append(box);
+    }
+  }
   openSheet('recordsSheet');
 }
 
+/* ───────── 睡前一起看（孩子視角，唯讀） ─────────
+   只列這七天做到的事：不放總數、不做比較、沒有任何會改資料的按鈕。
+   沒寫原因的變成親子回想遊戲；結尾的問句讓孩子自己評價自己。 */
+function openReview(){
+  const kid = cur();
+  closeSheet();
+  const rh = $('rvHead'); rh.textContent = '';
+  rh.append(avaFace(kid, 30), ` ${kid.name}，這週你做到的事`);
+  const list = $('rvList'); list.textContent = '';
+  const from = new Date(); from.setDate(from.getDate() - 6);
+  const fromKey = dkey(from);
+  const evs = eventsOf(kid.id).filter(e => e.type === 'plus' && e.date >= fromKey && e.date <= todayKey())
+    .sort((a, b) => a.date.localeCompare(b.date) || a.ts - b.ts);
+  if (!evs.length){
+    list.append(h('p', { class:'sub', style:'font-size:17px;margin-top:20px', text:`這七天還沒有星星——今天找一件 ${kid.name} 做到的小事吧。` }));
+  }
+  for (const e of evs){
+    const d = parseKey(e.date);
+    const row = h('button', { class:'rvrow', onclick: ev2 => {
+      FX.burst(ev2.clientX || innerWidth/2, ev2.clientY || innerHeight/2);
+      SFX.chime();
+    } });
+    row.append(svgStar());
+    row.append(h('div', {},
+      h('div', { class:'t', text: e.reason || '這天有一顆星星——還記得是哪件事嗎？' }),
+      h('div', { class:'d', text:`星期${WD[d.getDay()]}・${d.getMonth()+1}/${d.getDate()}` })));
+    list.append(row);
+  }
+  $('rvFoot').textContent = evs.length ? `（問問 ${kid.name}：你最喜歡哪一件？哪一件最難？）` : '';
+  $('review').classList.add('on');
+  try { $('rvClose').focus({ preventScroll:true }); } catch (e) {}
+}
+$('rvClose').onclick = () => $('review').classList.remove('on');
+
 /* ───────── 設定頁 ───────── */
 function openSettings(){
-  const bd = $('settingsBd'); bd.textContent = '';
+  const bd = $('settingsBd');
+  if (cloudOn() && cloudFrozen() && openSheetId !== 'settingsSheet') settingsTab = 'backup';   /* 雲端還在等你決定時，一打開就帶到備份分頁（但不鎖住其他分頁） */
+  /* 重繪不要把人彈回頁首：點一下原因標籤、換個顏色都會整頁重建；換分頁才回到頂 */
+  const st0 = (openSheetId === 'settingsSheet' && lastSettingsTab === settingsTab) ? bd.scrollTop : 0;
+  lastSettingsTab = settingsTab;
+  bd.textContent = '';
   bd.append(h('h2', { text:'設定' }));
-  bd.append(h('div', { class:'sec', text:'三個孩子（名字、頭像、顏色）' }));
+  /* 次分頁：內容多了，一長條會捲到天荒地老 */
+  const tb = h('div', { class:'stabs' });
+  for (const [tid, label] of [['kids', '孩子'], ['reasons', '原因'], ['backup', '備份'], ['other', '其他']]){
+    tb.append(h('button', { class:'stab' + (settingsTab === tid ? ' on' : ''), text:label, onclick: () => { settingsTab = tid; openSettings(); } }));
+  }
+  bd.append(tb);
+  if (settingsTab === 'kids'){
+  bd.append(h('div', { class:'sec', text:'孩子們（名字、頭像、顏色）' }));
+  bd.append(h('p', { class:'sub', text:'頭像可以選貼圖，也可以用孩子的照片（照片會縮小存在這支手機與你的備份裡，不會傳到別的地方）。孩子頁面最少 1 個、最多 5 個。' }));
   for (const k of state.kids){
     const t = theme(k);
     const card = h('div', { class:'kcard' });
-    const ava = h('div', { class:'ava', text:k.emoji, style:`--k-bg:${t.bg};--k-accent:${t.accent}` });
+    const ava = h('div', { class:'ava', style:`--k-bg:${t.bg};--k-accent:${t.accent}` });
+    const refreshAva = () => { ava.textContent = ''; if (k.photo) ava.append(h('img', { class:'face', src:k.photo, alt:'' })); else ava.append(k.emoji); };
+    refreshAva();
     const inp = h('input', { value:k.name, maxlength:'12', placeholder:'名字', enterkeyhint:'done' });
     inp.addEventListener('input', () => { k.name = inp.value.trim().slice(0, 12) || k.name; save(); renderKids(); });
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
     card.append(h('div', { class:'top' }, ava, inp));
     const emos = h('div', { class:'emos' });
-    for (const e of EMOJIS) emos.append(h('button', { class: e === k.emoji ? 'on' : '', text:e, 'aria-label':'頭像 ' + e, onclick: () => { k.emoji = e; save(); ava.textContent = e; emos.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent === e)); renderKids(); } }));
+    for (const e of EMOJIS) emos.append(h('button', { class: (e === k.emoji && !k.photo) ? 'on' : '', text:e, 'aria-label':'頭像 ' + e, onclick: () => {
+      k.emoji = e; k.photo = null; save();
+      refreshAva(); refreshPhotoRow();
+      emos.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent === e));
+      renderKids();
+    } }));
     card.append(emos);
+    /* 照片頭像：裁成正方形縮到 96px，只存在這支手機與備份裡 */
+    const pfile = h('input', { type:'file', accept:'image/*', class:'hide' });
+    pfile.addEventListener('change', () => {
+      const f = pfile.files[0];
+      if (f) setPhoto(k, f, () => { refreshAva(); refreshPhotoRow(); emos.querySelectorAll('button').forEach(b => b.classList.remove('on')); });
+      pfile.value = '';
+    });
+    const prow = h('div', { class:'btns', style:'margin-top:10px' });
+    const refreshPhotoRow = () => {
+      prow.textContent = '';
+      prow.append(h('button', { class:'sbtn', style:'height:40px;font-size:14px', text: k.photo ? '換一張照片' : '用照片當頭像', onclick: () => pfile.click() }));
+      if (k.photo) prow.append(h('button', { class:'sbtn', style:'height:40px;font-size:14px', text:'改回貼圖', onclick: () => { k.photo = null; save(); refreshAva(); refreshPhotoRow(); renderKids(); } }));
+    };
+    refreshPhotoRow();
+    card.append(prow, pfile);
+    /* 一次調整總好棒：把以前在別的地方累積的加進來（或修正記錯的數） */
+    const adjIn = h('input', { type:'number', inputmode:'numeric', placeholder:'調整總好棒，例如 30 或 -5' });
+    const adjBtn = h('button', { text:'調整', onclick: () => {
+      const v = Math.trunc(Number(adjIn.value));
+      if (!v){ toast('輸入要加減的數字，例如 30 或 -5', { ms:2500 }); return; }
+      if (Math.abs(v) > 10000){ toast('一次最多調整 10000 顆', { ms:3000 }); return; }
+      const C = netOf(k.id), Wv = walletOf(k.id);
+      if (v < 0 && (C + v < 0 || Wv + v < 0)){ toast(`最多只能減 ${Math.min(C, Wv)} 顆`, { ms:3000 }); return; }
+      addAdjust(k.id, v, '手動調整');
+      adjIn.value = '';
+      renderAll(); openSettings();
+      toast(`${k.name} 的總好棒${v > 0 ? '加了' : '減了'} ${Math.abs(v)} 顆`, { ms:3000 });
+    } });
+    adjIn.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); adjBtn.click(); } });
+    card.append(h('div', { class:'note', style:'margin-top:10px', text:'之前在別處累積的好棒可以在這裡一次加進來；中間跨過的滿 10 不會補放慶祝。' }));
+    card.append(h('div', { class:'inrow' }, adjIn, adjBtn));
     const sw = h('div', { class:'sw' });
     THEMES.forEach((th, i) => sw.append(h('button', {
       class: 'swatch' + (k.theme === i ? ' on' : ''), 'aria-label':th.name, 'aria-pressed': k.theme === i ? 'true' : 'false',
@@ -1575,14 +2333,52 @@ function openSettings(){
         k.theme = i; save(); applyTheme(); renderAll(); openSettings();
       } }, h('i'))));
     card.append(h('div', { class:'swname', text:t.name }), sw);
+    /* 移除孩子：不可逆（紀錄一起刪），所以要按三次才成立 */
+    if (state.kids.length > 1){
+      const evCount = eventsOf(k.id).length;
+      const rmLabels = [`移除 ${k.name} 這一頁`, `再按兩次：${k.name} 的 ${evCount} 筆紀錄會全部刪除`, `最後一次確認：真的要刪掉 ${k.name} 嗎？`];
+      let rmStep = 0, rmTimer = 0;
+      const rmBtn = h('button', { class:'sbtn warn', style:'width:100%;margin-top:12px;height:42px;font-size:14px', text:rmLabels[0], onclick: () => {
+        rmStep++;
+        if (rmStep < 3){
+          rmBtn.textContent = rmLabels[rmStep]; rmBtn.classList.add('fill');
+          clearTimeout(rmTimer);
+          rmTimer = setTimeout(() => { rmStep = 0; rmBtn.textContent = rmLabels[0]; rmBtn.classList.remove('fill'); }, 6000);
+          return;
+        }
+        clearTimeout(rmTimer);
+        state.events = state.events.filter(e => e.kid !== k.id);
+        state.kids = state.kids.filter(kk => kk.id !== k.id);
+        if (state.lastKid === k.id) state.lastKid = state.kids[0].id;
+        if (reasonEditKidId === k.id) reasonEditKidId = state.kids[0].id;
+        save(); applyTheme(); renderAll(); openSettings();
+        toast(`${k.name} 的頁面已移除`, { ms:4000 });
+      } });
+      card.append(rmBtn);
+    }
     bd.append(card);
   }
-  /* ── 常用原因：可以照自己家的說法增刪，內建的也能收起來 ── */
-  const reasonEditor = (title, note, deduct) => {
-    const st = state.settings;
+  if (state.kids.length < 5){
+    bd.append(h('button', { class:'sbtn', style:'width:100%;margin-bottom:6px', text:'＋ 新增一個孩子', onclick: () => {
+      let nn = 1; while (state.kids.some(k2 => k2.id === 'k' + nn)) nn++;
+      const usedT = new Set(state.kids.map(k2 => k2.theme));
+      let th = 0; while (usedT.has(th) && th < THEMES.length - 1) th++;
+      const usedE = new Set(state.kids.map(k2 => k2.emoji));
+      const em = EMOJIS.find(e2 => !usedE.has(e2)) || '🐥';
+      state.kids.push({ id:'k' + nn, name:`寶貝${state.kids.length + 1}`, emoji:em, photo:null, theme:th,
+        celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[] });
+      save(); renderAll(); openSettings();
+      toast('加好了！幫他改個名字吧', { ms:3000 });
+    } }));
+  }
+  }
+  if (settingsTab === 'reasons'){
+  /* ── 常用原因：每個孩子各一份，可以照自己家的說法增刪，內建的也能收起來 ── */
+  if (!reasonEditKidId || !kidById(reasonEditKidId)) reasonEditKidId = state.lastKid;
+  const reasonEditor = (rkid, title, note, deduct) => {
     const base = deduct ? DEDUCT_REASONS : REASONS;
-    const custom = deduct ? st.customDeductReasons : st.customReasons;
-    const hidden = deduct ? st.hiddenDeductReasons : st.hiddenReasons;
+    const custom = deduct ? rkid.customDeductReasons : rkid.customReasons;
+    const hidden = deduct ? rkid.hiddenDeductReasons : rkid.hiddenReasons;
     bd.append(h('div', { class:'sec', text:title }));
     bd.append(h('p', { class:'sub', text:note }));
     const wrap = h('div', { class:'rlist' });
@@ -1600,7 +2396,7 @@ function openSettings(){
       } }, h('span', { text:r }), h('em', { text:'×' })));
     }
     bd.append(wrap);
-    const inp = h('input', { placeholder: deduct ? '例如：亂丟弟弟的玩具' : '例如：自己倒水沒灑出來', maxlength:'30', enterkeyhint:'done' });
+    const inp = h('input', { placeholder: deduct ? '例如：亂丟別人的東西' : '例如：自己倒水沒灑出來', maxlength:'30', enterkeyhint:'done' });
     const add = () => {
       const v = inp.value.trim();
       if (!v) return;
@@ -1611,20 +2407,34 @@ function openSettings(){
     inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); add(); } });
     bd.append(h('div', { class:'inrow' }, inp, h('button', { text:'加入', onclick: add })));
   };
-  reasonEditor('蓋章的常用原因', '這些會出現在蓋章後的選項裡。點內建的可以收起來，點自己加的會刪掉；手打過的原因也會自動加進來。', false);
-  reasonEditor('扣除的常用原因', '扣除時用的選項，跟蓋章的分開。', true);
+  bd.append(h('div', { class:'sec', text:'常用原因（每個孩子分開設定）' }));
+  const rsw = h('div', { class:'btns' });
+  for (const kk of state.kids){
+    rsw.append(h('button', { class:'sbtn' + (kk.id === reasonEditKidId ? ' fill' : ''), style:'height:40px;font-size:14px',
+      onclick: () => { reasonEditKidId = kk.id; openSettings(); } }, avaFace(kk, 18), ` ${kk.name}`));
+  }
+  bd.append(rsw);
+  const rkid = kidById(reasonEditKidId);
+  reasonEditor(rkid, `${rkid.name} 蓋章的常用原因`, '這些會出現在蓋章後的選項裡。點內建的可以收起來，點自己加的會刪掉；手打過的原因也會自動加進來。', false);
+  reasonEditor(rkid, `${rkid.name} 扣除的常用原因`, '扣除時用的選項，跟蓋章的分開。', true);
 
+  }
+  if (settingsTab === 'other'){
   bd.append(h('div', { class:'sec', text:'音效' }));
   const tg = h('button', { class:'toggle' + (state.settings.sound ? ' on' : ''), role:'switch', 'aria-checked': state.settings.sound ? 'true' : 'false', 'aria-label':'蓋章與慶祝音效',
     onclick: () => { state.settings.sound = !state.settings.sound; save(); tg.classList.toggle('on', state.settings.sound); tg.setAttribute('aria-checked', state.settings.sound ? 'true' : 'false'); if (state.settings.sound) SFX.chime(); } });
   bd.append(h('div', { class:'srow' }, h('div', {}, h('div', { text:'蓋章與慶祝音效' }), h('div', { class:'note', text:'iPhone 側邊靜音鍵開著的時候不會出聲，這是正常的。' })), tg));
+  }
+  if (settingsTab === 'backup'){
 
   /* ── 自動快照：這是本機的自動備份，救得了誤刪，救不了手機掉了 ── */
   bd.append(h('div', { class:'sec', text:'自動備份（存在這支手機裡）' }));
   bd.append(h('p', { class:'sub', text:'每次蓋章或修改，app 都會自動另外存一份完整快照，保留最近 20 份與每天最後一份（60 天）。誤刪、誤扣、資料出問題都可以從這裡救回來。' }));
-  const snapBox = h('div', { class:'snaps' }, h('p', { class:'sub', text:'讀取中…' }));
+  /* 佔住上次已知的高度：非同步載入完成時，底下的備份按鈕才不會在指尖下方位移 */
+  const snapBox = h('div', { class:'snaps', style:`min-height:${Math.min(lastSnapCount, 12) * 57 || 40}px` }, h('p', { class:'sub', text:'讀取中…' }));
   bd.append(snapBox);
   listSnapshots().then(list => {
+    lastSnapCount = list.length;
     snapBox.textContent = '';
     if (!list.length){ snapBox.append(h('p', { class:'sub', text:'還沒有快照（第一次改動後幾秒就會出現）。' })); return; }
     list.slice(0, 12).forEach(rec => {
@@ -1637,7 +2447,10 @@ function openSettings(){
       let armed = 0;
       const btn = h('button', { class:'sbtn', style:'height:40px;font-size:14px', text:'還原', onclick: () => {
         if (!armed){ armed = 1; btn.textContent = '再按一次'; btn.classList.add('warn', 'fill'); setTimeout(() => { armed = 0; btn.textContent = '還原'; btn.classList.remove('warn', 'fill'); }, 3000); return; }
-        try { state = normalize(JSON.parse(rec.raw)); } catch (e) { toast('這份快照讀不出來'); return; }
+        let s2 = null;
+        try { s2 = normalize(JSON.parse(rec.raw)); } catch (e) { toast('這份快照讀不出來'); return; }
+        resetRuntime();
+        state = s2;
         save(); applyTheme(); renderAll(); closeSheet();
         toast(`已還原到 ${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())} 的樣子`, { ms:4000 });
       } });
@@ -1647,6 +2460,135 @@ function openSettings(){
     if (list.length > 12) snapBox.append(h('p', { class:'sub', style:'margin-top:8px', text:`還有 ${list.length - 12} 份較早的快照。` }));
   }).catch(() => { snapBox.textContent = ''; snapBox.append(h('p', { class:'sub', text:'這台裝置不支援自動快照，請多用下面的手動備份。' })); });
 
+  /* ── 雲端自動備份（GitHub Gist）── */
+  bd.append(h('div', { class:'sec', text:'雲端自動備份（GitHub）' }));
+  if (!cloudOn()){
+    bd.append(h('p', { class:'sub', text:'設定一次，之後每次蓋章都會自動把備份傳到你自己 GitHub 帳號的私人 Gist（只有你的帳號看得到），換手機時貼同一把金鑰就能整份拿回來。金鑰只存在這支手機，不會進備份檔。' }));
+    bd.append(h('div', { class:'help' }, h('ol', {},
+      h('li', {}, '用電腦或手機開 ', h('b', { text:'github.com/settings/tokens' }), '（要登入 GitHub）'),
+      h('li', {}, '「Generate new token (', h('b', { text:'classic' }), ')」→ 名稱隨意、期限選 No expiration'),
+      h('li', {}, '權限清單裡', h('b', { text:'只勾 gist' }), ' 一項 → Generate → 複製那串 ghp_ 開頭的金鑰貼到下面'))));
+    const tk = h('input', { placeholder:'貼上 ghp_ 開頭的金鑰', autocomplete:'off', autocapitalize:'off', spellcheck:'false' });
+    const connectBtn = h('button', { text:'連線', onclick: async () => {
+      const token = tk.value.trim();
+      if (!token){ toast('先貼上金鑰', { ms:2000 }); return; }
+      connectBtn.disabled = true; connectBtn.textContent = '連線中…';
+      pendingCloud = null;      /* 上一次連線留下的待決狀態全部作廢，不能拿舊快照誤導這一次 */
+      try {
+        const existing = await findCloudBackup(token);
+        gist = { token, gistId: existing ? existing.id : null, lastSyncAt: null, lastError: null, remoteStamp: existing ? (existing.updated_at || null) : null };
+        saveGist();
+        if (!existing){
+          const ok = await syncCloud(true);
+          toast(ok ? '已連線，之後每次改動都會自動備份' : '已連線，但第一次上傳失敗：' + (gist.lastError || ''), { ms:5000 });
+          openSettings(); return;
+        }
+        /* 雲端已經有一份備份：先讀回來看清楚，拍板之前絕不上傳
+           （讀不到也不上傳——用本機資料蓋掉一份「還救得回來」的雲端備份是最糟的結果） */
+        let cloud = null;
+        try { const raw = await fetchCloudContent(); if (raw) cloud = normalize(JSON.parse(raw)); } catch (e) {}
+        if (!cloud){
+          /* 讀失敗（可能只是網路抖一下）：凍結上傳，等讀得到、使用者決定了才動雲端 */
+          gist.pending = true; gist.lastError = '讀不到雲端備份的內容'; saveGist();
+          toast('已連線，但雲端那份備份還讀不出來——先不動它，稍後到設定頁再比對一次。', { ms:6000 });
+          openSettings(); return;
+        }
+        if (state.events.length === 0){
+          resetRuntime();
+          state = cloud; save(); applyTheme(); renderAll();
+          toast('已連線，並從雲端拿回 ' + state.events.length + ' 筆紀錄', { ms:5000 });
+          openSettings(); return;
+        }
+        /* 兩邊都有資料：讓使用者決定（選項畫在設定頁上）。
+           pending 旗標要落地——關掉 app 再開，凍結也不能失效 */
+        gist.pending = true; saveGist();
+        pendingCloud = { cloud };
+        openSettings();
+      } catch (e) {
+        connectBtn.disabled = false; connectBtn.textContent = '連線';
+        toast((e && e.message) ? e.message : '連線失敗', { ms:4000 });
+      }
+    } });
+    bd.append(h('div', { class:'inrow' }, tk, connectBtn));
+  } else {
+    /* 連線時發現兩邊都有資料：先拍板，拍板前兩邊都不動 */
+    if (pendingCloud){
+      const cl = pendingCloud.cloud;
+      const lastD = cl.events.map(e => e.date).sort().pop() || '—';
+      bd.append(h('div', { class:'warncard', text:`雲端已經有一份備份（${cl.events.length} 筆，最後一筆 ${lastD}），這支手機上也有 ${state.events.length} 筆。要用哪一份？你決定之前，兩邊都不會被動到。` }));
+      const crow = h('div', { class:'btns' });
+      let a1 = 0, a2 = 0;
+      const useCloud = h('button', { class:'sbtn fill', text:'用雲端的（覆蓋這支手機）', onclick: () => {
+        if (!a1){ a1 = 1; useCloud.textContent = '再按一次確定'; setTimeout(() => { a1 = 0; useCloud.textContent = '用雲端的（覆蓋這支手機）'; }, 4000); return; }
+        resetRuntime();
+        state = pendingCloud.cloud; pendingCloud = null;
+        gist.pending = false; saveGist();
+        save(); applyTheme(); renderAll(); openSettings();
+        toast('已改用雲端那份備份', { ms:3000 });
+      } });
+      const useLocal = h('button', { class:'sbtn warn', text:'用這支手機的（覆蓋雲端）', onclick: async () => {
+        if (!a2){ a2 = 1; useLocal.textContent = '再按一次確定'; setTimeout(() => { a2 = 0; useLocal.textContent = '用這支手機的（覆蓋雲端）'; }, 4000); return; }
+        pendingCloud = null;
+        gist.pending = false; saveGist();
+        const ok = await syncCloud(true);
+        toast(ok ? '已用這支手機的資料覆蓋雲端' : '上傳失敗：' + (gist.lastError || '請稍後再試'), { ms:4000 });
+        openSettings();
+      } });
+      crow.append(useCloud, useLocal);
+      bd.append(crow);
+    } else if (gist.pending){
+      /* 上次連線時沒決定完（或當時雲端讀不出來）：重新讀一次來比對，期間上傳持續凍結 */
+      bd.append(h('div', { class:'warncard', text:'上次連線時發現雲端已經有一份備份，還沒決定要用哪一份，自動上傳先暫停。' }));
+      bd.append(h('button', { class:'sbtn fill', text:'讀取雲端備份來比對', onclick: async e => {
+        const b = e.currentTarget; b.disabled = true; b.textContent = '讀取中…';
+        try {
+          const raw = await fetchCloudContent();
+          if (!raw) throw new Error('讀不到內容');
+          pendingCloud = { cloud: normalize(JSON.parse(raw)) };
+          openSettings();
+        } catch (err) {
+          b.disabled = false; b.textContent = '讀取雲端備份來比對';
+          toast('還是讀不到，晚點再試（可能沒網路）', { ms:4000 });
+        }
+      } }));
+    }
+    const ls = gist.lastSyncAt ? new Date(gist.lastSyncAt) : null;
+    bd.append(h('p', { class:'sub', text:
+      (ls ? `✅ 已連線。上次同步：${ls.getMonth()+1}/${ls.getDate()} ${pad(ls.getHours())}:${pad(ls.getMinutes())}。` : '已連線，還沒同步成功過。')
+      + (gist.lastError ? `（上次錯誤：${gist.lastError}）` : '每次改動 15 秒後與切到背景時自動上傳。') }));
+    const cbtns = h('div', { class:'btns' });
+    if (!cloudFrozen()) cbtns.append(h('button', { class:'sbtn fill', text:'立刻同步', onclick: async e => {
+      const b = e.currentTarget; b.disabled = true; b.textContent = '同步中…';
+      const ok = await syncCloud(true);      /* 親手按的才准強制覆蓋雲端 */
+      toast(ok ? '已同步到雲端' : '同步失敗：' + (gist.lastError || '請稍後再試'), { ms:3500 });
+      openSettings();
+    } }));
+    let armedCloud = 0;
+    const pullBtn = h('button', { class:'sbtn', text:'從雲端拿回備份', onclick: async () => {
+      try {
+        const raw = await fetchCloudContent();
+        if (!raw){ toast('雲端沒有讀到備份', { ms:3000 }); return; }
+        const s = normalize(JSON.parse(raw));
+        if (!armedCloud){
+          armedCloud = 1; pullBtn.textContent = `雲端有 ${s.events.length} 筆，再按一次覆蓋本機`; pullBtn.classList.add('warn');
+          setTimeout(() => { armedCloud = 0; pullBtn.textContent = '從雲端拿回備份'; pullBtn.classList.remove('warn'); }, 5000);
+          return;
+        }
+        resetRuntime();
+        pendingCloud = null;
+        if (gist){ gist.pending = false; saveGist(); }   /* 拿雲端那份＝已經做了決定 */
+        state = s; save(); applyTheme(); renderAll(); closeSheet();
+        toast('已從雲端還原', { ms:3000 });
+      } catch (e) { toast((e && e.message) || '讀取失敗', { ms:3500 }); }
+    } });
+    cbtns.append(pullBtn);
+    cbtns.append(h('button', { class:'sbtn warn', text:'中斷連線', onclick: () => {
+      gist = null; pendingCloud = null; saveGist();
+      toast('已中斷，雲端那份備份還在你的 GitHub 裡', { ms:4000 }); openSettings();
+    } }));
+    bd.append(cbtns);
+  }
+
   bd.append(h('div', { class:'sec', text:'匯出備份（帶得走的那一份）' }));
   const lb = state.settings.lastBackupAt ? new Date(state.settings.lastBackupAt) : null;
   const daysAgo = lb ? Math.floor((Date.now() - lb.getTime()) / 864e5) : null;
@@ -1655,7 +2597,7 @@ function openSettings(){
       ? `已經 ${daysAgo} 天沒有匯出備份了。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。`
       : '還沒有匯出過備份。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。' }));
   }
-  bd.append(h('p', { class:'sub', text:`資料只存在這支手機的這個 app 裡，不會上傳到任何地方。換手機、清除網站資料、或把主畫面上的圖示刪掉，紀錄都會跟著不見。${lb ? `上次匯出：${lb.getFullYear()}/${lb.getMonth()+1}/${lb.getDate()}（${daysAgo} 天前）` : ''}` }));
+  bd.append(h('p', { class:'sub', text:`${cloudOn() ? '除了上面你自己設定的雲端備份，資料不會傳到任何其他地方。' : '資料只存在這支手機的這個 app 裡，不會上傳到任何地方。'}換手機、清除網站資料、或把主畫面上的圖示刪掉，這支手機上的紀錄都會不見。${lb ? `上次匯出：${lb.getFullYear()}/${lb.getMonth()+1}/${lb.getDate()}（${daysAgo} 天前）` : ''}` }));
   const btns = h('div', { class:'btns' });
   const ta = h('textarea', { class:'bk hide' });
   const markBacked = () => { state.settings.lastBackupAt = new Date().toISOString(); save(); renderKids(); };
@@ -1701,6 +2643,7 @@ function openSettings(){
   const confirmBtn = h('button', { class:'sbtn warn', text:'確定覆蓋目前資料', disabled:true, onclick: () => {
     if (!pending) return;
     if (!armed){ armed = 1; confirmBtn.textContent = '再按一次就覆蓋'; confirmBtn.classList.add('fill'); setTimeout(() => { armed = 0; confirmBtn.textContent = '確定覆蓋目前資料'; confirmBtn.classList.remove('fill'); }, 3000); return; }
+    resetRuntime();
     state = normalize(pending); save(); applyTheme(); renderAll(); closeSheet(); toast('已還原備份');
   } });
   function check(text){
@@ -1709,7 +2652,7 @@ function openSettings(){
       const raw = JSON.parse(text); const s = normalize(raw);
       if (!raw || !Array.isArray(raw.kids) || !Array.isArray(raw.events)) throw new Error('format');
       const lastDate = s.events.map(e => e.date).sort().pop();
-      preview.textContent = `看起來是好棒印章的備份：${s.kids.map(k => k.name).join('、')}，共 ${s.events.length} 筆紀錄${lastDate ? `，最後一筆 ${lastDate}` : ''}。`;
+      preview.textContent = `看起來是好棒印章的備份：${s.kids.map(k => k.name).join('、')}，共 ${s.events.length} 筆紀錄${lastDate ? `，最後一筆 ${lastDate}` : ''}。${cloudOn() ? '還原之後，雲端備份也會跟著變成這一份。' : ''}`;
       pending = raw; confirmBtn.disabled = false;
     } catch (e) { preview.textContent = '這段文字不是好棒印章的備份格式。'; }
   }
@@ -1717,12 +2660,19 @@ function openSettings(){
   file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; f.text().then(t => { rta.value = t; check(t); }); });
   bd.append(rta, h('div', { class:'btns' }, h('button', { class:'sbtn', text:'選備份檔', onclick: () => file.click() }), confirmBtn), preview, file);
 
+  }
+  if (settingsTab === 'other'){
+  bd.append(h('div', { class:'sec', text:'使用說明書' }));
+  bd.append(h('p', { class:'sub' }, '怎麼蓋、怎麼備份、給阿公阿嬤的三句話，都在 ', h('a', { href:'manual.html', target:'_blank', style:'color:var(--accent-dark);font-weight:700', text:'使用說明書' }), ' 裡（可以印出來貼冰箱）。'));
+
   bd.append(h('div', { class:'sec', text:'裝到 iPhone 主畫面' }));
   bd.append(h('div', { class:'help' }, h('ol', {}, h('li', { text:'用 Safari 打開這個網址' }), h('li', {}, '點下方的 ', h('b', { text:'分享' }), ' 按鈕（方框加向上箭頭）'), h('li', {}, '選 ', h('b', { text:'加入主畫面' }), ' → 右上角「新增」')),
     h('p', { class:'sub', text:'之後從主畫面圖示打開，會像 app 一樣全螢幕，沒網路也能用。' }),
     h('p', { class:'sub', text:'注意兩件事：Safari 分頁跟主畫面 app 的資料是分開存的，先加到主畫面再開始蓋章；還有，只在 Safari 分頁裡用的話，一個禮拜沒打開 iPhone 可能會自動清掉，裝到主畫面才會長期保留。' })));
-  bd.append(h('p', { class:'sub', style:'margin-top:16px', text:'好棒印章 v1 ・ 資料不會離開你的手機。' }));
+  bd.append(h('p', { class:'sub', style:'margin-top:16px', text: cloudOn() ? '好棒印章 v1 ・ 資料只去你自己的 GitHub 備份，不去任何其他地方。' : '好棒印章 v1 ・ 資料不會離開你的手機。' }));
+  }
   openSheet('settingsSheet');
+  bd.scrollTop = st0;
 }
 
 /* ───────── 鍵盤 ─────────
@@ -1765,7 +2715,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && to
 setInterval(() => { if (!document.hidden && todayKey() !== TODAY) renderAll(); }, 60000);
 
 /* ───────── 啟動 ───────── */
-load(); applyTheme(); renderAll(); nextTip(); window.__showInstallHint();
+load(); loadGist(); applyTheme(); renderAll(); nextTip(); window.__showInstallHint();
+if (cloudOn()) scheduleCloudSync();      /* 開 app 也排一次，把上次沒傳成的補上 */
 
 /* 開 app 時提醒備份，但一天最多講一次，不要變成另一種嘮叨 */
 setTimeout(() => {
