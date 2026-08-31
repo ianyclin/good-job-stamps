@@ -337,6 +337,8 @@ svg{display:block}
 .rtag .rx{font-size:16px; color:var(--dim); width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:rgba(0,0,0,.06); border:0; padding:0; flex:0 0 34px}
 .rtag.mine{border-style:dashed}
 .rtag.off{border-color:#D0D0D0; color:#9A9A9A; text-decoration:line-through; padding-left:14px}
+/* 只活在「最近用過」的暫時選項：虛線點狀，跟正式清單區分 */
+.rtag.temp{border-style:dotted; color:var(--dim); padding-left:14px}
 .rtag.off .rx{color:var(--accent-dark); background:rgba(var(--accent-rgb),.25); text-decoration:none}
 .srow{display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:15px}
 .srow .note{font-size:13px; color:var(--dim); margin-top:3px; line-height:1.45}
@@ -351,6 +353,10 @@ svg{display:block}
 .sbtn.warn.fill{background:#C0392B; color:#fff}
 .sbtn:disabled{opacity:.4}
 .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
+/* 日期頁底下那兩顆：左邊加分、右邊扣分，各自靠邊。
+   .lnk 本身帶 margin-left:auto（單獨用時靠右），在這裡要清掉才推得動 */
+.dayacts{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px}
+.dayacts .lnk{margin:0}
 /* 字級一定要 16px：iOS 一碰到小於 16px 的輸入框就會自動放大整頁 */
 textarea.bk{width:100%; height:110px; border-radius:12px; border:1.5px solid #ddd; padding:10px; font-size:16px; font-family:ui-monospace, Menlo, monospace; resize:none; margin-top:8px; background:#fff; color:var(--ink)}
 .snaps{display:flex; flex-direction:column}
@@ -1328,11 +1334,15 @@ function orderedPool(kid, deduct){
    被親手「收起」的內建原因例外——不准借道「最近用過」溜回來 */
 function reasonChipsFor(kid){
   const pool = orderedPool(kid, false);
-  const recents = kid.recentReasons.filter(r => !kid.hiddenReasons.includes(r));
-  const extras = recents.filter(r => !pool.includes(r));
-  if (!state.settings.recentFirst) return [...pool, ...extras];
+  /* 「最近用過」帶出來的暫時選項，只在「手打不自動入列」時才存在。
+     自動入列開著時，清單就是唯一的真相——不在清單裡＝已經被親手刪掉了，
+     不准借道「最近用過」溜回面板（設定頁列不出來的東西，面板也不該有，不然刪不掉） */
+  const temp = state.settings.autoAddTyped ? []
+    : kid.recentReasons.filter(r => !kid.hiddenReasons.includes(r) && !pool.includes(r));
+  if (!state.settings.recentFirst) return [...pool, ...temp];
+  const recents = kid.recentReasons.filter(r => pool.includes(r) || temp.includes(r));
   const seen = new Set(); const out = [];
-  for (const r of [...recents, ...pool]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
+  for (const r of [...recents, ...pool, ...temp]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
   return out;
 }
 function rememberReason(kid, r, deduct){
@@ -2461,7 +2471,7 @@ function openDay(key){
   bd.append(btn);
   /* 長按蓋多顆有個看得見的入口：不知道長按這招的人（或用 VoiceOver）也找得到。
      左＝加分入口、右＝扣分入口，兩邊分開站 */
-  bd.append(h('div', { class:'btns', style:'justify-content:space-between;width:100%' },
+  bd.append(h('div', { class:'dayacts' },
     h('button', { class:'lnk', text:'一次蓋好幾顆', onclick: () => openMulti(key) }),
     h('button', { class:'lnk', text:'在這天扣一顆', onclick: () => openDeduct(key) })));
   openSheet('daySheet');
@@ -2959,7 +2969,19 @@ function openSettings(){
           hidden.splice(hidden.indexOf(r), 1); redraw();
         } })));
     }
+    /* 關掉自動入列時，手打的字只活在「最近用過」——它們也會出現在蓋章面板，
+       所以這裡一定要列得出來、刪得掉；不然就會有「面板看得到、設定頁找不到」的鬼魂 */
+    const temps = (!deduct && !state.settings.autoAddTyped)
+      ? rkid.recentReasons.filter(r => !base.includes(r) && !custom.includes(r) && !hidden.includes(r))
+      : [];
+    for (const r of temps){
+      wrap.append(h('div', { class:'rtag temp', 'data-r':r }, h('span', { text:r }),
+        h('button', { class:'rx', text:'×', 'aria-label':`拿掉「${r}」`, onclick: () => {
+          rkid.recentReasons = rkid.recentReasons.filter(x => x !== r); redraw();
+        } })));
+    }
     bd.append(wrap);
+    if (temps.length) bd.append(h('p', { class:'sub', text:'虛線那幾個是最近手打過的，會在面板出現一陣子；按 × 可以現在就拿掉。' }));
     const inp = h('input', { placeholder: deduct ? '例如：亂丟別人的東西' : '例如：自己倒水沒灑出來', maxlength:'40', 'aria-label': deduct ? '新增扣除的常用原因' : '新增蓋章的常用原因', enterkeyhint:'done' });
     const add = () => {
       const v = inp.value.trim();
