@@ -86,6 +86,9 @@ ol.steps li::before{
 .heart .why{display:block; font-size:16px; color:var(--dim)}
 
 footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
+.toc a{color:var(--accent-dark); text-decoration:none; font-weight:700}
+html{scroll-behavior:smooth}
+@media print{.toc{display:none}}
 
 /* ── 列印：把背景拿掉、卡片改細框、不從卡片中間換頁 ── */
 @media print{
@@ -106,7 +109,7 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="top">
 
 <header>
   <div class="star">⭐</div>
@@ -114,23 +117,40 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
   <p>給爸爸媽媽，也給幫忙帶孫的阿公阿嬤。<br>可以印出來，貼在冰箱上。</p>
 </header>
 
+<!-- 目錄 ─────────────────────────── -->
+<nav class="card toc" aria-label="目錄">
+  <h2 style="font-size:20px">目錄</h2>
+  <ol style="margin:6px 0 2px; padding-left:24px">
+    <li><a href="#s1">第一次使用（只要做一次）</a></li>
+    <li><a href="#s2">每天怎麼蓋</a></li>
+    <li><a href="#s3">給阿公阿嬤的三句話</a></li>
+    <li><a href="#s4">扣星星與兌換（要用的時候才用）</a></li>
+    <li><a href="#s5">滿 10 顆與滿 100 顆</a></li>
+    <li><a href="#s6">睡前一起看</a></li>
+    <li><a href="#s7">備份（很重要）</a></li>
+    <li><a href="#s8">常見問題</a></li>
+    <li><a href="#s9">給家長的心法精華</a></li>
+  </ol>
+</nav>
+
+
 <!-- 1 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">1</span>第一次使用（只要做一次）</h2>
+  <h2 id="s1"><span class="no">1</span>第一次使用（只要做一次）</h2>
   <ol class="steps">
     <li>用 iPhone 的 <b>Safari</b> 打開好棒印章的網址。</li>
     <li>點下面中間的 <b>分享</b> 按鈕（一個方框加向上箭頭）。</li>
     <li>往下找，點 <b>加入主畫面</b>，再按右上角的「新增」。</li>
     <li>以後都從主畫面上的「好棒印章」圖示打開，不要再從 Safari 開。</li>
   </ol>
-  <div class="note">為什麼一定要裝到主畫面？因為<b>裝成 app，紀錄才會好好留著</b>。直接用 Safari 蓋的章，跟 app 裡是分開的兩本簿子，還可能被手機自動清掉。</div>
+  <div class="note">為什麼一定要裝到主畫面？因為<b>裝成 app，紀錄才留得住</b>。直接用 Safari 蓋的章，跟 app 裡是分開的兩本簿子，還可能被手機自動清掉；裝成 app 好很多，但偶爾備份還是最保險。</div>
   <h3>裝好後的第一件事</h3>
-  <p>點右上角的齒輪 <b>⚙️</b>，把三個孩子的<b>名字、頭像、顏色</b>改成自己家的（頭像可以選貼圖，也可以<b>用孩子的照片</b>——選好照片後用手指<b>拖動、兩指縮放</b>或拉下面的滑桿，讓圓圈框住最棒的表情，再按「就用這個範圍」）。之後點誰的頭像，整個畫面就變成誰的顏色，一眼就知道現在翻到誰的簿子。</p>
+  <p>點右上角的齒輪 <b>⚙️</b>，把每個孩子的<b>名字、頭像、顏色</b>改成自己家的（頭像可以選貼圖，也可以<b>用孩子的照片</b>——選好照片後用手指<b>拖動、兩指縮放</b>或拉下面的滑桿，讓圓圈框住最棒的表情，再按「就用這個範圍」）。之後點誰的頭像，整個畫面就變成誰的顏色，一眼就知道現在翻到誰的簿子。</p>
 </section>
 
 <!-- 2 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">2</span>每天怎麼蓋</h2>
+  <h2 id="s2"><span class="no">2</span>每天怎麼蓋</h2>
   <ol class="steps">
     <li>孩子做到一件<b>具體的事</b>：自己收玩具、把碗拿去水槽、有耐心等……</li>
     <li>點畫面最上面<b>他的頭像</b>，切到他的頁面（整頁會變成他的顏色）。</li>
@@ -153,7 +173,7 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 3 ─────────────────────────── -->
 <section class="card grandma">
-  <h2><span class="no">3</span>給阿公阿嬤的三句話</h2>
+  <h2 id="s3"><span class="no">3</span>給阿公阿嬤的三句話</h2>
   <div class="bigline"><span class="cn">一</span><span>孫子做了好事，只要按<b>最大的那顆按鈕</b>就好，其他都不用動。</span></div>
   <div class="bigline"><span class="cn">二</span><span>跳出來的選項不知道要選什麼，就按「<b>先跳過</b>」或不理它，<b>星星不會不見</b>。</span></div>
   <div class="bigline"><span class="cn">三</span><span>按到什麼畫面回不去，找右上角的「<b>關閉</b>」兩個字，按下去就回來了。</span></div>
@@ -162,7 +182,7 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 4 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">4</span>扣星星與兌換（要用的時候才用）</h2>
+  <h2 id="s4"><span class="no">4</span>扣星星與兌換（要用的時候才用）</h2>
   <ol class="steps">
     <li>點左下角灰色的 <span class="pill grey">−</span>。</li>
     <li>先選或寫原因（可以不填）。</li>
@@ -183,7 +203,7 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 5 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">5</span>滿 10 顆與滿 100 顆</h2>
+  <h2 id="s5"><span class="no">5</span>滿 10 顆與滿 100 顆</h2>
   <ul>
     <li><b>滿 10 顆</b>：畫面中央會出現<b>十顆星星，一顆一顆亮起來</b>、旁邊浮出做過的事，第十顆亮起時撒紙花——跟孩子一起數到十。</li>
     <li><b>滿 100 顆</b>：整個畫面會放<b>煙火</b>。這時把手機交給孩子，讓他<b>自己</b>按 <span class="pill gold">收下 ⭐</span>——會看到金星星飛進今天的格子，從此那格帶著<b>金色的框</b>，是他的紀念章。（不小心開著想先關：右上角有「關閉」。）</li>
@@ -192,7 +212,7 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 6 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">6</span>睡前一起看</h2>
+  <h2 id="s6"><span class="no">6</span>睡前一起看</h2>
   <ol class="steps">
     <li>點畫面上方的<b>星星總數</b>（那個大數字），打開他的紀錄。</li>
     <li>按最上面的 <span class="pill">跟他一起看這週 ⭐</span>——整個畫面會變成給孩子看的樣子：只有這七天做到的事，一顆星星一件事，大大的字。</li>
@@ -204,7 +224,7 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 7 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">7</span>備份（很重要）</h2>
+  <h2 id="s7"><span class="no">7</span>備份（很重要）</h2>
   <p>紀錄是孩子一顆一顆蓋出來的，值得三層保護：</p>
   <h3>第一層：自動快照（app 自己做，不用管）</h3>
   <p>每次蓋章，app 都會自動在手機裡多存一份。誤刪、誤扣、資料怪怪的，到設定頁的「自動備份」那一區就能救回來。</p>
@@ -217,11 +237,11 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 8 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">8</span>常見問題</h2>
+  <h2 id="s8"><span class="no">8</span>常見問題</h2>
   <ul>
     <li><b>蓋章怎麼沒聲音？</b>看看 iPhone 左側的<b>靜音鍵</b>是不是撥到靜音了，撥回去就有聲音。（設定頁裡也有音效開關。）</li>
     <li><b>名字、頭像、顏色想改？</b>右上角齒輪 ⚙️ 隨時可以改，改了紀錄都還在。常用原因也是在那裡改，<b>每個孩子分開設定</b>。</li>
-    <li><b>家裡不是三個孩子？</b>設定頁可以<b>新增或移除</b>孩子頁面（1 到 5 個）。移除會連紀錄一起刪，要按三次確認才會成立。</li>
+    <li><b>孩子人數想增減？</b>設定頁可以<b>新增或移除</b>孩子頁面（1 到 5 個）。移除會連紀錄一起刪，要按三次確認才會成立。</li>
     <li><b>月曆滑到別的月份，回不來？</b>月曆上方會出現一顆「<b>回到這個月</b>」按鈕，按一下就回來了。</li>
     <li><b>在 Safari 蓋的章，app 裡怎麼沒有？</b>Safari 跟主畫面的 app 是分開的兩本簿子。先照第 1 節裝到主畫面，再開始蓋。</li>
   </ul>
@@ -229,16 +249,17 @@ footer{text-align:center; font-size:15px; color:var(--dim); padding-top:8px}
 
 <!-- 9 ─────────────────────────── -->
 <section class="card">
-  <h2><span class="no">9</span>給家長的心法精華</h2>
+  <h2 id="s9"><span class="no">9</span>給家長的心法精華</h2>
   <ol class="heart">
     <li><b>印章只能事後蓋。</b><span class="why">先講「你做完就給你一顆」，星星就變成薪水了。</span></li>
     <li><b>說出具體那一件事。</b><span class="why">「你剛剛自己把碗拿去水槽」比「你好棒」有用。</span></li>
-    <li><b>三個孩子各自跟自己比。</b><span class="why">星星不拿來比誰多誰少，只跟昨天的自己比。</span></li>
+    <li><b>孩子們各自跟自己比。</b><span class="why">星星不拿來比誰多誰少，只跟昨天的自己比。</span></li>
     <li><b>有一件事天天都做到了，就讓它「畢業」。</b><span class="why">改找下一件他正在練習的事。</span></li>
     <li><b>對還小的孩子，當下的抱抱才算數。</b><span class="why">星星是給大人看的紀錄，擁抱才是他收到的。</span></li>
   </ol>
 </section>
 
+<p style="text-align:center; margin:4px 0 14px"><a href="#top" style="color:var(--accent-dark); font-weight:700; text-decoration:none">↑ 回到最上面</a></p>
 <footer>好棒印章 使用說明書 ⭐ 印出來貼冰箱剛剛好</footer>
 
 </div>

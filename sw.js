@@ -5,13 +5,14 @@
    集章資料都在 localStorage，不經過這裡。 */
 'use strict';
 
-const VERSION = 'v6';
+const VERSION = 'v7';
 const PREFIX = 'good-job-stamps-';
 const CACHE = `${PREFIX}${VERSION}`;
-const SHELL = [
-  './',
-  './index.html',
-  './manifest.json',
+/* 核心：缺一個就不准啟用新版——網路不穩時，寧可繼續用完整的舊版，
+   也不要拿殘缺的新版把它換掉（activate 會刪舊快取，換錯就回不去了） */
+const CORE = ['./', './index.html', './manifest.json'];
+/* 加分：抓不到也沒關係，之後上線時會自己補 */
+const EXTRA = [
   './manual.html',
   './icons/icon.svg',
   './icons/icon-180.png',
@@ -25,8 +26,8 @@ const SHELL_KEY = './index.html';
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    /* 少一個檔案也不該讓安裝整個失敗 */
-    await Promise.all(SHELL.map(u => cache.add(u).catch(() => {})));
+    await cache.addAll(CORE);                       /* 失敗就讓 install 整個失敗，保住舊版 */
+    await Promise.all(EXTRA.map(u => cache.add(u).catch(() => {})));
     await self.skipWaiting();
   })());
 });
