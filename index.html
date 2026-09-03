@@ -266,6 +266,9 @@ svg{display:block}
 #toast.on{opacity:1; transform:none}
 #toast span{flex:1; pointer-events:none}
 #toast button{margin-left:auto; background:none; border:1.5px solid rgba(255,211,107,.75); border-radius:12px; color:#FFD36B; font-weight:700; font-size:16px; min-height:44px; min-width:64px; padding:0 12px; white-space:nowrap; pointer-events:auto}
+/* 吐司淡出後按鈕要一起退場：父層 opacity:0 藏不住它——它仍接點擊、仍在 Tab 順序裡，
+   點到月曆右下角就會把剛才的扣除無聲復原（第四輪 high）。visibility 才會同時退出命中測試與無障礙樹 */
+#toast:not(.on) button{visibility:hidden}
 /* 原因面板開著時，toast 改貼畫面頂端——面板會長高（還有誰也做了），別去猜它的高度 */
 #reasonPanel.on ~ #toast{bottom:auto; top:calc(env(safe-area-inset-top) + 8px)}
 
@@ -337,8 +340,10 @@ svg{display:block}
 .rtag .rx{font-size:16px; color:var(--dim); width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:rgba(0,0,0,.06); border:0; padding:0; flex:0 0 34px}
 .rtag.mine{border-style:dashed}
 .rtag.off{border-color:#D0D0D0; color:#9A9A9A; text-decoration:line-through; padding-left:14px}
-/* 只活在「最近用過」的暫時選項：虛線點狀，跟正式清單區分 */
-.rtag.temp{border-style:dotted; color:var(--dim); padding-left:14px}
+/* 只活在「最近用過」的暫時選項：點線＋「暫」字，跟正式清單區分
+   （自己加的正式原因是虛線 dashed，兩種斷續框線肉眼難分，所以要再加一個字） */
+.rtag.temp{border-style:dotted; color:var(--dim); padding-left:8px}
+.rtag .tmp{font-size:11px; font-weight:700; line-height:1; padding:3px 5px; border-radius:8px; background:rgba(0,0,0,.08); color:var(--dim)}
 .rtag.off .rx{color:var(--accent-dark); background:rgba(var(--accent-rgb),.25); text-decoration:none}
 .srow{display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(0,0,0,.06); font-size:15px}
 .srow .note{font-size:13px; color:var(--dim); margin-top:3px; line-height:1.45}
@@ -617,7 +622,7 @@ const TIPS = [
   ['小技巧','蓋完選個原因，就會出現「還有誰也做了？」——兄弟姊妹一起記，不用切頁。'],
   ['小技巧','原因滑不完？按右邊的「⌄」整排攤開。'],
   ['小技巧','常用原因的順序，設定頁拖「≡」自己排。'],
-  ['小技巧','兩週沒把備份帶出手機（匯出或雲端），齒輪旁會出現小灰點。'],
+  ['小技巧','兩週沒匯出備份、雲端也三天沒同步成功，齒輪旁會出現小灰點。'],
 ];
 const COPY_TEN = ['十顆星星，十件你做到的事。','一顆一顆蓋出來的，沒有一顆是白來的。','這十顆，每一顆都有一個故事。','又十顆了，你自己有發現嗎？'];
 /* 第二句不寫「N 件做到的事」：有扣除時淨值≠做到的件數，文案不能把餘額說成件數 */
@@ -808,8 +813,8 @@ function fresh(){
     lastKid: 'k1', tipOrder: [], tipIndex: 0,
     kids: [
       /* 預設兩位；家裡不只兩個就用「＋新增一個孩子」，顏色會自動指派沒人用的主題 */
-      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
-      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
+      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], recentDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
+      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], recentDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
     ],
     events: [],
   };
@@ -887,6 +892,7 @@ function normalize(raw){
            不然開機對帳會把它們誤判成漏慶祝、每次開機都補放一場 */
         .filter((n, i, a) => a.indexOf(n) === i).sort((a, b) => a - b).slice(-500),
       recentReasons: strList(k.recentReasons, 60, 6),
+      recentDeductReasons: strList(k.recentDeductReasons, 60, 6),
     };
   });
 
@@ -918,6 +924,9 @@ function normalize(raw){
   s.lastKid = (typeof raw.lastKid === 'string' && kidIds.has(raw.lastKid)) ? raw.lastKid : s.kids[0].id;
   s.tipOrder = (Array.isArray(raw.tipOrder) ? raw.tipOrder : [])
     .filter(i => Number.isInteger(i) && i >= 0 && i < TIPS.length);
+  /* 袋子的長度跟現在的句數不一樣（小語新增或刪減過）：清空讓 nextTip 立刻重洗，
+     新句子才不用等舊的那輪全部走完才露面。不在這裡洗牌——normalize 也被 sameState 拿來比對，不能有隨機 */
+  if (s.tipOrder.length && s.tipOrder.length !== TIPS.length) s.tipOrder = [];
   s.tipIndex = Math.min(Math.max(0, Number(raw.tipIndex) || 0), s.tipOrder.length);
   /* v1 → v2：滿 N 統計改成只看「蓋章 − 扣除」（調整不進統計）。
      v1 的調整曾把跨過的滿 10 靜默補進 celebrated——這批要清掉，
@@ -961,7 +970,7 @@ function save(){
        所以除了跳一次提示，總數下面也留一個常駐標記，不會被下一個 toast 蓋掉。 */
     lastSaveOk = false;
     try { renderHero(); } catch (e2) {}
-    toast('存不進去（可能容量滿了或在私密瀏覽），請先到設定頁備份', { ms:8000, action:'去備份', onAction: openSettings });
+    toast('存不進去（可能容量滿了或在私密瀏覽），請先到設定頁備份', { ms:8000, action:'去備份', onAction: () => { settingsTab = 'backup'; openSettings(); } });
   }
 }
 let idSeq = 0;
@@ -1027,7 +1036,15 @@ const errMsg = (e, fallback) => (e && e.name === 'AbortError') ? '連線逾時�
    下次開 app 比對版本戳就誤判成別台裝置動過，狂跳「要用哪一份」的假警報。 */
 const hashStr = s => { let h2 = 5381; for (let i = 0; i < s.length; i++) h2 = ((h2 << 5) + h2 + s.charCodeAt(i)) >>> 0; return s.length + '.' + h2.toString(36); };
 function sameState(raw){
-  try { return JSON.stringify(normalize(JSON.parse(raw))) === JSON.stringify(normalize(JSON.parse(JSON.stringify(state)))); }
+  /* 「全等」指的是孩子的紀錄一樣：選到哪個孩子、小語輪到第幾句、這台手機何時匯出過，
+     都是單機才會動的畫面狀態，不該讓紀錄相同的兩份被判成不同（第四輪實測：lastKid 一變就判不同） */
+  const strip = o => {
+    const n = normalize(o);
+    n.lastKid = ''; n.tipOrder = []; n.tipIndex = 0;
+    if (n.settings){ n.settings.lastBackupAt = null; n.settings.hintDismissed = false; }
+    return JSON.stringify(n);
+  };
+  try { return strip(JSON.parse(raw)) === strip(JSON.parse(JSON.stringify(state))); }
   catch (e) { return false; }
 }
 /* 雲端內容＝自己上傳過的那份（或跟本機一模一樣）→ 默默把帳記對、解凍、照常同步。
@@ -1035,29 +1052,63 @@ function sameState(raw){
 function adoptIfEcho(r){
   if (!gist || !r || !r.raw) return false;
   const hh = hashStr(r.raw);
-  if (hh !== gist.pendingPush && hh !== gist.lastPush && !sameState(r.raw)) return false;
-  gist.remoteStamp = r.stamp || null; gist.pending = false; gist.pendingPush = null;
+  const byHash = hh === gist.pendingPush || hh === gist.lastPush;
+  if (!byHash && !sameState(r.raw)) return false;
+  /* 命中之後把 lastPush 對齊成這份內容的指紋：同一份回音若被自動路與手動鈕各比一次，
+     第二次才不會因為 pendingPush 已清、lastPush 是更早那份而誤判成別台寫入（第四輪 medium） */
+  gist.remoteStamp = r.stamp || null; gist.pending = false; gist.pendingPush = null; gist.lastPush = hh;
   pendingCloud = null; saveGist(); scheduleCloudSync();
-  return true;
+  return byHash ? 'push' : 'same';   /* 呼叫端靠這個分辨該講哪句話：指紋命中≠內容一模一樣 */
+}
+/* 設定頁開著才重繪；onlyBackup 時還要正停在備份分頁——
+   改名字的輸入框、剛貼進還原框的備份文字，不能被一次無關的重繪清掉 */
+function refreshSettings(onlyBackup){
+  if (openSheetId !== 'settingsSheet') return;
+  if (onlyBackup && settingsTab !== 'backup') return;
+  try { openSettings(); } catch (e) {}
 }
 /* 發現雲端被別台裝置動過（或舊設定沒有指紋可比）：凍結上傳、把雲端那份讀回來，
    讓設定頁的「要用哪一份」拍板卡接手。這裡絕不自動覆蓋任何一邊。 */
-async function freezeForConflict(g){
+async function freezeForConflict(g, pre){
   g.pending = true;
   if (gist === g) saveGist();
+  let r = null;
   try {
-    const r = await fetchCloudContent();
-    if (r && r.gone && gist === g) return freezeForGone(g);   /* 讀的瞬間被刪掉了：轉「不見了」流程 */
+    /* pre＝syncCloud 第一支 GET 已經拿回來的檔案內容：直接用，不再打第二支請求——
+       第二支請求在飛的那幾百毫秒若 app 被 iOS 回收，pending 已落地卻沒人再比對，
+       雲端備份會無聲停擺到使用者自己進設定頁為止（第四輪 medium） */
+    r = pre || await fetchCloudContent();
+    if (r && r.gone && gist === g){ await freezeForGone(g); return 'gone'; }   /* 讀的瞬間被刪掉了：轉「不見了」流程 */
     /* 先驗是不是「自己的回音」：是的話不吵人，把帳記對就走 */
     if (gist === g && adoptIfEcho(r)){
-      if (openSheetId === 'settingsSheet'){ try { openSettings(); } catch (e) {} }
-      return;
+      refreshSettings(true);
+      return 'echo';
     }
     if (gist === g && r && r.raw) pendingCloud = { cloud: normalize(JSON.parse(r.raw)), stamp: r.stamp };
-  } catch (e) {}   /* 讀不到也沒關係：pending 已落地，設定頁會出「讀取雲端備份來比對」 */
-  if (gist !== g) return;                          /* 讀取途中被中斷連線：不留殘骸、不誤導吐司 */
-  if (openSheetId === 'settingsSheet'){ try { openSettings(); } catch (e) {} }
-  toast('雲端備份跟這支手機不同步了——到設定頁選要用哪一份', { ms:5000, action:'去看', onAction: () => { settingsTab = 'backup'; openSettings(); } });
+  } catch (e) { r = null; }   /* 讀不到也沒關係：pending 已落地，開 app／回前景會再比對一次，設定頁也有「讀取雲端備份來比對」 */
+  if (gist !== g) return 'aborted';                /* 讀取途中被中斷連線：不留殘骸、不誤導吐司 */
+  refreshSettings(true);
+  if (pendingCloud){
+    toast('雲端備份跟這支手機不同步了——到設定頁選要用哪一份', { ms:5000, action:'去看', onAction: () => { settingsTab = 'backup'; openSettings(); } });
+    return 'conflict';
+  }
+  /* 讀取失敗：只是還沒比對成，不是「不同步」，更沒有要選的——別把家長叫去拍板一張不存在的卡 */
+  toast('雲端備份還沒比對完（讀不到雲端內容），稍後會再試一次', { ms:5000, action:'去看', onAction: () => { settingsTab = 'backup'; openSettings(); } });
+  return 'failed';
+}
+/* pending 已落地、但指紋還在（自己傳過的內容）：開 app／回前景／網路回來時靜默再比對一次。
+   是回音就解凍繼續同步，零打擾；不是回音就把雲端那份放進拍板卡，不吐司（每次開 app 吐一次會變嘮叨）；
+   讀不到就下次再試。連線流程留下的待決沒有指紋可比，不在這裡處理，交給拍板卡 */
+async function retryEcho(){
+  if (!cloudOn() || !gist.pending || !gist.gistId || pendingCloud) return;
+  if (!gist.pendingPush && !gist.lastPush) return;
+  const g = gist;
+  try {
+    const r = await fetchCloudContent();
+    if (gist !== g || !r || r.gone) return;
+    if (adoptIfEcho(r)){ refreshSettings(true); return; }
+    if (r.raw){ pendingCloud = { cloud: normalize(JSON.parse(r.raw)), stamp: r.stamp }; refreshSettings(true); }
+  } catch (e) {}
 }
 /* 雲端那份 gist 不見了（被刪掉或搬走），而這支手機以前明明同步過：
    不准自動重建——先找找是不是別台裝置剛重建了一份（撿回來比對），
@@ -1085,21 +1136,23 @@ function scheduleCloudSync(){
   clearTimeout(cloudTimer);
   cloudTimer = setTimeout(() => { syncCloud().catch(() => {}); }, 15000);
 }
-async function syncCloud(force){
+let lastSyncOutcome = '';     /* 'ok'／'busy'／'frozen'／'error'：「立刻同步」鈕靠它講對話，不再把排隊或回音說成失敗 */
+async function syncCloud(force, _retried){
+  lastSyncOutcome = 'frozen';
   if (!cloudOn() || cloudFrozen()) return false;
-  if (cloudBusy){ cloudPending = true; return false; }
-  cloudBusy = true;
+  if (cloudBusy){ cloudPending = true; lastSyncOutcome = 'busy'; return false; }
+  cloudBusy = true; lastSyncOutcome = 'error';
   const g = gist;          /* 上傳途中被「中斷連線」清掉時，用這個別名安全收尾 */
-  let ok = false, retry404 = false, conflict = false, gone = false;
+  let ok = false, retry404 = false, conflict = false, gone = false, pre = null;
   try {
     /* 上次 POST 建檔可能成功了但回條被逾時吞掉（pendingPush 還掛著、gistId 卻是空的）：
        再 POST 會生出第二份孤兒 gist。先找一次帳號裡有沒有那份，找到就掛回去，
-       讓下面的指紋比對＋回音判定接手 */
+       讓下面的指紋比對＋回音判定接手。
+       搜尋「連不上」跟「確定沒有」不是同一回事：連不上就讓這趟同步以失敗收場、下次再搜，
+       不能照樣 POST——那會多出一份 app 不再認得的 gist，帶著孩子的名字與照片，「刪除雲端備份」刪不到它 */
     if (!g.gistId && g.pendingPush && !force){
-      try {
-        const orphan = await findCloudBackup(g.token);
-        if (orphan){ g.gistId = orphan.id; g.remoteStamp = null; if (gist === g) saveGist(); }
-      } catch (e2) {}
+      const orphan = await findCloudBackup(g.token);
+      if (orphan){ g.gistId = orphan.id; g.remoteStamp = null; if (gist === g) saveGist(); }
     }
     /* 上傳前先核對雲端指紋：跟上一次寫上去的版本戳（remoteStamp）不一樣，
        表示有另一支裝置動過——一律擋下、進「要用哪一份」拍板流程，連手動按「立刻同步」
@@ -1120,6 +1173,10 @@ async function syncCloud(force){
         const meta = await chk.json();
         if (!g.remoteStamp || (meta.updated_at && meta.updated_at !== g.remoteStamp)){
           conflict = true;
+          /* 這支 GET 已經把檔案內容帶回來了（1 MB 以下不會 truncated）：交給 freezeForConflict 直接比對，
+             省掉第二支請求和它的時間窗 */
+          const f = meta.files && meta.files['haobang-backup.json'];
+          if (f && f.content && !f.truncated) pre = { raw: f.content, stamp: meta.updated_at || null };
         }
       }
     }
@@ -1153,7 +1210,7 @@ async function syncCloud(force){
       g.gistId = j.id; g.remoteStamp = j.updated_at || null;
       g.lastPush = g.pendingPush; g.pendingPush = null;   /* 回條到手：這份內容確定在雲端了 */
       g.lastSyncAt = new Date().toISOString(); g.lastError = null;
-      if (gist === g){ saveGist(); ok = true; }     /* 途中被中斷連線就不落地也不宣稱成功 */
+      if (gist === g){ saveGist(); ok = true; lastSyncOutcome = 'ok'; }     /* 途中被中斷連線就不落地也不宣稱成功 */
     }
   } catch (e) {
     if (!(e && e.conflict)){
@@ -1165,16 +1222,24 @@ async function syncCloud(force){
     cloudBusy = false;                              /* 任何路徑都要放手，不能讓同步永久卡死 */
   }
   if (gone && gist === g){ await freezeForGone(g); return false; }
-  if (conflict && gist === g){ await freezeForConflict(g); return false; }
+  if (conflict && gist === g){
+    const how = await freezeForConflict(g, pre);
+    /* 是自己的回音：帳已記對，立刻把這支手機較新的改動傳上去，
+       「立刻同步」按下去才真的是立刻同步，不用等 15 秒；只補跑一次，不會迴圈 */
+    if (how === 'echo' && !_retried && gist === g){ clearTimeout(cloudTimer); return syncCloud(force, true); }
+    return false;
+  }
   if (retry404) return syncCloud(force);            /* 鎖已放乾淨，重試會自己重新上鎖 */
   if (cloudPending){ cloudPending = false; scheduleCloudSync(); }
   if (typeof renderKids === 'function') try { renderKids(); } catch (e) {}
   return ok;
 }
-/* 沒網路時上傳會失敗，等網路回來自動補一次；切到背景是最好的上傳時機 */
-addEventListener('online', () => scheduleCloudSync());
+/* 沒網路時上傳會失敗，等網路回來自動補一次；切到背景是最好的上傳時機；
+   回前景與網路回來也順便把「待決但有指紋」的回音再比對一次 */
+addEventListener('online', () => { retryEcho().catch(() => {}); scheduleCloudSync(); });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && cloudOn()){ clearTimeout(cloudTimer); syncCloud().catch(() => {}); }
+  else if (!document.hidden && cloudOn()) retryEcho().catch(() => {});
 });
 /* 用金鑰在帳號裡找有沒有既有的備份 Gist（換手機時用）。
    一頁 100 筆、最多翻 10 頁：帳號裡 gist 很多的人，備份不在第一頁也要找得到，
@@ -1332,28 +1397,36 @@ function orderedPool(kid, deduct){
    手打但沒進清單的原因（自動加入關著時）跟著「最近用過」活一陣子：
    預設接在清單後面，不打亂排好的位置；浮動模式就跟其他最近的一起排前面。
    被親手「收起」的內建原因例外——不准借道「最近用過」溜回來 */
-function reasonChipsFor(kid){
-  const pool = orderedPool(kid, false);
+/* 「最近用過」每個孩子兩份：蓋章一份、扣除一份。
+   設定頁那兩個開關講的是「原因」這件事，蓋章與扣除要一樣，不能只有一半生效 */
+const recentsOf = (kid, deduct) => (deduct ? kid.recentDeductReasons : kid.recentReasons) || [];
+function reasonChipsFor(kid, deduct){
+  const pool = orderedPool(kid, !!deduct);
+  const hidden = deduct ? kid.hiddenDeductReasons : kid.hiddenReasons;
+  const rec = recentsOf(kid, deduct);
   /* 「最近用過」帶出來的暫時選項，只在「手打不自動入列」時才存在。
      自動入列開著時，清單就是唯一的真相——不在清單裡＝已經被親手刪掉了，
      不准借道「最近用過」溜回面板（設定頁列不出來的東西，面板也不該有，不然刪不掉） */
   const temp = state.settings.autoAddTyped ? []
-    : kid.recentReasons.filter(r => !kid.hiddenReasons.includes(r) && !pool.includes(r));
+    : rec.filter(r => !hidden.includes(r) && !pool.includes(r));
   if (!state.settings.recentFirst) return [...pool, ...temp];
-  const recents = kid.recentReasons.filter(r => pool.includes(r) || temp.includes(r));
+  const recents = rec.filter(r => pool.includes(r) || temp.includes(r));
   const seen = new Set(); const out = [];
   for (const r of [...recents, ...pool, ...temp]){ if (r && !seen.has(r)){ seen.add(r); out.push(r); } }
   return out;
 }
 function rememberReason(kid, r, deduct){
   if (!r || !kid) return;
-  if (!deduct) kid.recentReasons = [r, ...kid.recentReasons.filter(x => x !== r)].slice(0, 6);
+  if (deduct) kid.recentDeductReasons = [r, ...recentsOf(kid, true).filter(x => x !== r)].slice(0, 6);
+  else kid.recentReasons = [r, ...kid.recentReasons.filter(x => x !== r)].slice(0, 6);
   const base = deduct ? DEDUCT_REASONS : REASONS;
   const custom = deduct ? kid.customDeductReasons : kid.customReasons;
   /* 手打過的原因自動變成這個孩子的常用選項（設定頁可以關掉；關掉時只留在「最近用過」）。
      滿 40 就不收——跟設定頁的上限行為一致，不無聲擠掉使用者自己排好的舊原因 */
-  if (state.settings.autoAddTyped && !base.includes(r) && !custom.includes(r) && custom.length < 40){
-    custom.push(r);
+  if (state.settings.autoAddTyped && !base.includes(r) && !custom.includes(r)){
+    if (custom.length < 40) custom.push(r);
+    /* 滿了要說：設定頁加第 41 個會吐司，面板手打卻無聲不收，家長下次找不到會以為沒記到 */
+    else toast('自訂原因已經 40 個了，這一句只記在這顆星星上；到設定頁刪幾個再手打就會收進清單', { ms:4500 });
   }
 }
 /* 改選原因時，把「這一次蓋章才自動加進清單／最近」的舊字收回——
@@ -1481,9 +1554,15 @@ function renderHero(){
 
 /* ───────── 3. 月曆 ───────── */
 function renderCalendar(){
+  TODAY = todayKey();   /* 「是不是本月」與「今天格」用同一個時間來源：跨月午夜後翻到新月份，不能整片被當成未來、沒有今天框 */
   const k = cur(); const map = dayMap(k.id);
   $('calTitle').textContent = `${view.y} 年 ${view.m+1} 月`;
-  const grid = $('grid'); grid.textContent = '';
+  const grid = $('grid');
+  /* 重建整個月曆前記下焦點在哪一格：鍵盤／VoiceOver 扣完一顆，closeSheet 剛把焦點還給格子，
+     緊接著的重畫不能把它拿走害人從頭找 */
+  const ae = document.activeElement;
+  const focusDate = (ae && ae.classList && ae.classList.contains('cell') && grid.contains(ae)) ? ae.getAttribute('data-date') : null;
+  grid.textContent = '';
   const first = new Date(view.y, view.m, 1);
   const startDow = first.getDay();
   const dim = new Date(view.y, view.m+1, 0).getDate();
@@ -1493,6 +1572,7 @@ function renderCalendar(){
     const key = `${view.y}-${pad(view.m+1)}-${pad(day)}`;
     grid.append(buildCell(key, day, map[key] || []));
   }
+  if (focusDate){ const again = grid.querySelector(`[data-date="${focusDate}"]`); if (again) try { again.focus({ preventScroll:true }); } catch (e) {} }
   /* 滑到別的月份時，給一條看得見的路回來（點標題那個彩蛋沒人知道） */
   const now = new Date();
   const onNow = view.y === now.getFullYear() && view.m === now.getMonth();
@@ -1532,6 +1612,7 @@ function buildCell(key, day, evs){
   return cell;
 }
 function onCellTap(key, cell){
+  if (Date.now() - kbDeductAt < 900) return;   /* 鍵盤扣完焦點接回格子時，還壓著的 Enter 會對格子連發 click：不算 */
   /* 用當下算出來的今天，不用快取的 TODAY：app 開著跨過午夜時，新的一天不該被當成未來 */
   if (key > todayKey()){ cell.classList.remove('shake'); void cell.offsetWidth; cell.classList.add('shake'); return; }
   /* 孩子戳自己的星星，星星先跳一下回應他，再打開那一天 */
@@ -1551,7 +1632,13 @@ function gotoMonth(dy, dir){
 }
 $('prevM').onclick = () => gotoMonth(-1, -1);
 $('nextM').onclick = () => gotoMonth(1, 1);
-$('calTitle').onclick = () => { const d = new Date(); const dir = (d.getFullYear()*12+d.getMonth()) - (view.y*12+view.m); view = { y:d.getFullYear(), m:d.getMonth() }; renderCalendar(); renderHero(); if (dir) { const g=$('grid'); g.classList.add(dir>0?'slide-l':'slide-r'); } };
+$('calTitle').onclick = () => {
+  const d = new Date(); const dir = (d.getFullYear()*12+d.getMonth()) - (view.y*12+view.m);
+  view = { y:d.getFullYear(), m:d.getMonth() }; renderCalendar(); renderHero();
+  /* 跟 gotoMonth 同款：先清掉殘留的 slide class 再加、中間 reflow 一次，動畫才會重播、方向才對——
+     從過去月份按「回到這個月」時舊的 slide-r 沒清，CSS 後宣告的那條勝出，等於沒有動畫 */
+  if (dir){ const g = $('grid'); g.classList.remove('slide-l','slide-r'); void g.offsetWidth; g.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
+};
 $('backNow').onclick = () => $('calTitle').click();
 /* 在格子區左右滑換月 */
 (() => {
@@ -1566,11 +1653,19 @@ $('backNow').onclick = () => $('calTitle').click();
 })();
 
 /* ───────── 5. 家長小語 ───────── */
+/* 需要兩個以上孩子才成立的小技巧（「還有誰也做了」那句）：單孩家庭抽到就跳過 */
+const SIB_TIP = TIPS.findIndex(t => t[1].includes('還有誰也做了'));
 function nextTip(){
-  if (!state.tipOrder.length || state.tipIndex >= state.tipOrder.length){
-    const o = TIPS.map((_, i) => i);
-    for (let i = o.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [o[i], o[j]] = [o[j], o[i]]; }
-    state.tipOrder = o; state.tipIndex = 0;
+  /* 小語列被「回到這個月」頂替時（翻到別的月份）不抽：抽了沒人看到，連續切孩子會把幾句無聲跳過 */
+  if ($('tip').classList.contains('hide')) return;
+  for (let guard = 0; guard < 3; guard++){
+    if (!state.tipOrder.length || state.tipIndex >= state.tipOrder.length){
+      const o = TIPS.map((_, i) => i);
+      for (let i = o.length-1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [o[i], o[j]] = [o[j], o[i]]; }
+      state.tipOrder = o; state.tipIndex = 0;
+    }
+    if (state.tipOrder[state.tipIndex] === SIB_TIP && state.kids.length < 2){ state.tipIndex++; continue; }
+    break;
   }
   const [cat, tx] = TIPS[state.tipOrder[state.tipIndex]] || TIPS[0];
   state.tipIndex++; save();
@@ -1924,7 +2019,7 @@ async function runQueue(){
         kid.celebrated.push(job.net); save();       /* 先記再播：播到一半關掉 app 也不會重播 */
         try {
           if (m === 'big') await celebrateHundred(kid, job.net);
-          else await celebrateTen(kid, job.net);
+          else await celebrateTen(kid, job.net, job.id);   /* 帶上觸發那一顆：字幕要錨在它，不是錨在「此刻最新的十顆」 */
         } catch (err) { $('big').classList.remove('on'); $('banner').style.transform = 'translateY(-120%)'; }
       }
       if (job.quick) lastQuick = job;
@@ -2045,7 +2140,7 @@ function tapToSkip(ms){
     setTimeout(fin, ms); setTimeout(() => document.addEventListener('pointerdown', fin, true), 300);
   });
 }
-async function celebrateTen(kid, T){
+async function celebrateTen(kid, T, anchorId){
   /* 面板若正開著（例如剛按了「二寶也做了」），慶祝完要還回來——
      不然第三個孩子跟撤銷就點不到了 */
   const panelWasOpen = $('reasonPanel').classList.contains('on');
@@ -2060,7 +2155,12 @@ async function celebrateTen(kid, T){
   starsBox.textContent = ''; line.textContent = '';
   const slots = [];
   for (let i = 0; i < 10; i++){ const s = svgStar(); starsBox.append(s); slots.push(s); }
-  const recent = eventsOf(kid.id).filter(e => e.type === 'plus').sort((a, b2) => a.ts - b2.ts).slice(-10);
+  /* 十格字幕錨在觸發慶祝的那一顆：長按連蓋跨過第 10 顆時，第 11 顆早已寫進紀錄，
+     取「此刻最新的十顆」會整排往後滑一格、最早那件事被擠掉（第四輪實測）。
+     補慶祝那條路沒有工單，才退回最新十顆 */
+  const plusEvs = eventsOf(kid.id).filter(e => e.type === 'plus').sort((a, b2) => a.ts - b2.ts);
+  const ai = anchorId ? plusEvs.findIndex(e => e.id === anchorId) : -1;
+  const recent = ai >= 0 ? plusEvs.slice(Math.max(0, ai - 9), ai + 1) : plusEvs.slice(-10);
   lay.classList.add('on');
   lay.setAttribute('aria-hidden', 'false');
   lay.style.pointerEvents = 'auto';               /* 慶祝期間由這層滿版覆蓋接住點擊，跳過時才不會誤按到底下的按鈕 */
@@ -2074,8 +2174,10 @@ async function celebrateTen(kid, T){
       slots[i].classList.add('lit');
       anim(slots[i], [{ transform:'scale(.4)' }, { transform:'scale(1.35)', offset:.6 }, { transform:'scale(1)' }], 160);
       SFX.step(i);
+      /* 沒寫原因的那顆要把字幕清掉：沿用上一顆的原因會把星星配到別件事上，
+         而這個儀式的全部意義就是「這一顆＝這件事」 */
       const r = recent[i] && recent[i].reason;
-      if (r) line.textContent = r;
+      line.textContent = r || '';
     }
     SFX.ten(); FX.confettiSides(80);
     /* 幫別的孩子（批次蓋）觸發的慶祝，不能放大「目前畫面上這個孩子」的總數 */
@@ -2134,7 +2236,7 @@ async function celebrateHundred(kid, T){
       renderAll();
     }
     /* 備份提醒是行政事務，別踩進情感時刻——晚幾秒再說 */
-    setTimeout(() => toast(`${T} 顆了，要不要到設定頁備份一下？`, { ms:6000, action:'去備份', onAction: openSettings }), 9000);
+    setTimeout(() => toast(`${T} 顆了，要不要到設定頁備份一下？`, { ms:6000, action:'去備份', onAction: () => { settingsTab = 'backup'; openSettings(); } }), 9000);
     finish();
   };
   take.onclick = () => close(true);
@@ -2163,7 +2265,13 @@ async function celebrateHundred(kid, T){
 
 /* ───────── 原因面板（快速蓋章後） ───────── */
 let rpTimer = 0, rpJob = null;
-function rpArm(){ clearTimeout(rpTimer); rpTimer = setTimeout(hideReasonPanel, 10000); }
+function rpArm(){
+  clearTimeout(rpTimer);
+  /* 「其他…」的輸入框展開著＝家長正在打字：不倒數。打字本身不算觸碰，
+     以前只要再碰一下面板（改錯字、滑原因列、按 ⌄）就重新倒數，打到一半面板收掉、字不見（第四輪實測） */
+  if (!$('rpCustom').classList.contains('hide')) return;
+  rpTimer = setTimeout(hideReasonPanel, 10000);
+}
 function showReasonPanel(job){
   rpJob = job;
   const kid = kidById(job.kid);
@@ -2326,6 +2434,7 @@ $('rpUndo').onclick = () => {
       const cel = (rpJob.batchRef && rpJob.batchRef.celebrated) || [];
       kid.celebrated = kid.celebrated.filter(m => !cel.includes(m));
       state.events = state.events.filter(e => !(e.type === 'gold' && e.kid === kid.id && cel.includes(e.n) && e.ts >= (rpJob.batchFirstTs || 0)));
+      undoAutoAdded(rpJob, kid);
       save(); renderAll(); toast(`已撤銷這 ${removed} 顆`);
     }
     hideReasonPanel(); return;
@@ -2344,10 +2453,20 @@ $('rpUndo').onclick = () => {
         if (gi >= 0) state.events.splice(gi, 1);
       }
     }
+    undoAutoAdded(rpJob, kid);
     save(); renderAll(); toast('已撤銷');
   }
   hideReasonPanel();
 };
+/* 撤銷＝這顆從來沒發生：這張工單才自動加進清單／最近用過的手打原因也一起收回
+   （手足「再按一次收回」那條路本來就會收，主孩子的撤銷以前漏了） */
+function undoAutoAdded(job, kid){
+  const w = job && job.autoAdded && kid && job.autoAdded[kid.id];
+  if (!w) return;
+  const ci = kid.customReasons.indexOf(w); if (ci >= 0) kid.customReasons.splice(ci, 1);
+  kid.recentReasons = kid.recentReasons.filter(x => x !== w);
+  delete job.autoAdded[kid.id];
+}
 /* 面板內任何觸碰都重新計時：家長滑選項滑到一半、轉頭跟孩子講話，面板不該自己溜走。
    focusin 也算（VoiceOver 的探索是 focus，不發 pointerdown） */
 $('reasonPanel').addEventListener('pointerdown', () => { if ($('reasonPanel').classList.contains('on')) rpArm(); });
@@ -2447,7 +2566,9 @@ function openDay(key){
   const btn = h('button', { class:'pbtn', onclick: async () => {
     if (daySuppress){ daySuppress = false; return; }   /* 長按放開時的 click 不能又蓋一顆 */
     const reason = picker.value();
-    const job = addStamp(kid.id, key, reason, false);
+    /* quick=true：蓋完也開原因面板。原因已經選好的話面板會直接帶出「這件事，還有誰也做了？」——
+       小技巧與說明書都說蓋完選原因會出現那一排，作者習慣的就是這條格子路，以前它根本不開面板（第四輪 medium） */
+    const job = addStamp(kid.id, key, reason, true);
     closeSheet();
     /* 如果畫面停在別的月份，先翻回這一天所在的月份，
        不然印章會飛去總數、格子也不會亮，看起來像「章不知道蓋到哪去了」 */
@@ -2522,16 +2643,21 @@ function openDeduct(key){
   bd.append(h('h2', { text:`要扣掉 ${kid.name} 的一顆星星嗎？` + (isToday ? '' : `（${d.getMonth()+1} 月 ${d.getDate()} 日）`) }));
   const tipsBefore = TIPS.filter(t => t[0] === '扣之前');
   bd.append(h('p', { class:'sub', text: pick(tipsBefore)[1] }));
-  if (eventsOf(kid.id).some(e => e.type === 'minus' && e.date === key)) bd.append(h('p', { class:'sub warn', text:`這天已經扣過一顆了。再扣之前，先想想 ${kid.name} 知不知道是哪件事。` }));
-  if (n === 0){
-    bd.append(h('p', { class:'sub', text:`${kid.name} 現在是 0 顆，沒有可以扣的星星。` }));
+  const minusN = eventsOf(kid.id).filter(e => e.type === 'minus' && e.date === key).length;
+  if (minusN) bd.append(h('p', { class:'sub warn', text:`這天已經扣過 ${minusN} 顆了。再扣之前，先想想 ${kid.name} 知不知道是哪件事。` }));
+  /* 兩本帳都要看：收集數 0 顆沒得扣；總好棒 0 顆（換掉或調整掉了）也不能扣——
+     開面板時就講，不要讓人選完原因、按住一秒才被打回票 */
+  if (n === 0 || walletOf(kid.id) <= 0){
+    bd.append(h('p', { class:'sub', text: n === 0
+      ? `${kid.name} 現在是 0 顆，沒有可以扣的星星。`
+      : `${kid.name} 的總好棒已經用完（換掉或調整掉了）——先處理兌換或調整，才能再扣。` }));
     bd.append(h('button', { class:'pbtn', text:'知道了', onclick: closeSheet }));
-    /* 兌換紀錄的入口不能因為 0 顆就消失（要看紀錄、刪誤兌換都靠它） */
-    bd.append(h('button', { class:'lnk', text:'🎁 看兌換紀錄', onclick: openRedeem, style:'margin:8px auto 0' }));
+    /* 兌換的入口不能因為 0 顆就消失：舊帳調整進來的好棒只能換、不能扣，這裡就是換的路 */
+    bd.append(h('button', { class:'lnk', text:'🎁 用好棒換東西', onclick: openRedeem, style:'margin:8px auto 0' }));
     openSheet('deductSheet'); return;
   }
   bd.append(h('div', { class:'sec', text:'原因（可以不填）' }));
-  const picker = chipPicker(orderedPool(kid, true), { grey:true, placeholder:'發生了什麼事？' });
+  const picker = chipPicker(reasonChipsFor(kid, true), { grey:true, placeholder:'發生了什麼事？' });
   bd.append(picker.el);
   const holdTx = h('span', { text:'按住不放才會扣' });
   const hold = h('button', { class:'hold' }, h('div', { class:'fill' }), holdTx);
@@ -2548,6 +2674,10 @@ function openDeduct(key){
     }
   };
   const commitDeduct = () => {
+    /* 計時器到點時扣除面板已經不在（按了 Esc、Tab 移焦後按了別的、第二根手指點了遮罩、
+       或 Tab 到「🎁」開了兌換把整張面板換掉）＝使用者已經放棄：不寫入。
+       兌換面板借用同一個 sheet id，所以還要看 hold 鈕本身是不是還在畫面上（第四輪實測：Esc 後 0.6 秒照扣） */
+    if (openSheetId !== 'deductSheet' || !hold.isConnected){ reset(false); return; }
     /* 鍵盤扣成後 Enter 常常還壓著：關 sheet 會把焦點還給「−」鈕，
        壓著的 Enter 會立刻把 sheet 又打開——記個時間戳讓「−」短暫免疫 */
     if (pid === 'kb') kbDeductAt = Date.now();
@@ -2561,6 +2691,10 @@ function openDeduct(key){
     state.events.push({ id:newId(), kid:kid.id, type:'minus', date:key, ts:Date.now(), reason });
     rememberReason(kid, reason, true); save();
     closeSheet();
+    /* 跟三條蓋章路一樣翻回那一天所在的月份：−N 是扣除在月曆上唯一的可見回饋，
+       停在別的月份時扣一顆，不翻月就只看到大數字少一顆（deductFeedback 裡的 renderAll 會重畫） */
+    const dm = parseKey(key);
+    if (dm.getFullYear() !== view.y || dm.getMonth() !== view.m) view = { y:dm.getFullYear(), m:dm.getMonth() };
     deductFeedback(kid.id, key);
   };
   hold.addEventListener('pointerdown', e => {
@@ -2670,7 +2804,8 @@ function deductFeedback(kidId, key){
 let kbDeductAt = 0;
 $('minusBtn').onclick = () => {
   if (Date.now() - kbDeductAt < 900) return;   /* 鍵盤剛扣完、Enter 還壓著的回彈點擊不算 */
-  if (netOf(state.lastKid) === 0){ toast('目前沒有可以扣的星星', { ms:1500 }); return; }
+  /* 收集數 0 但總好棒還有（舊帳調整進來的）：面板照開，裡面是兌換的入口——說明書教的「按 − 找 🎁」那條路不能斷 */
+  if (netOf(state.lastKid) === 0 && walletOf(state.lastKid) <= 0){ toast('目前沒有可以扣的星星', { ms:1500 }); return; }
   openDeduct(todayKey());
 };
 
@@ -2777,7 +2912,7 @@ function openSettings(){
   /* 次分頁：內容多了，一長條會捲到天荒地老 */
   const tb = h('div', { class:'stabs' });
   for (const [tid, label] of [['kids', '孩子'], ['reasons', '原因'], ['backup', '備份'], ['other', '其他']]){
-    tb.append(h('button', { class:'stab' + (settingsTab === tid ? ' on' : ''), text:label, onclick: () => {
+    tb.append(h('button', { class:'stab' + (settingsTab === tid ? ' on' : ''), text:label, 'aria-pressed': settingsTab === tid ? 'true' : 'false', onclick: () => {
       settingsTab = tid; openSettings();
       /* 重繪會把按下的分頁鈕整顆換新：把焦點接回新的那顆，鍵盤/VoiceOver 才不會掉到 body */
       const nb = [...$('settingsBd').querySelectorAll('.stab')].find(b2 => b2.textContent === label);
@@ -2867,6 +3002,8 @@ function openSettings(){
         state.kids = state.kids.filter(kk => kk.id !== k.id);
         if (state.lastKid === k.id) state.lastKid = state.kids[0].id;
         if (reasonEditKidId === k.id) reasonEditKidId = state.kids[0].id;
+        /* 開機對帳留下的「待補慶祝」跟著人走：不清的話，新增的孩子撿回同一個 id 就會被播一場別人的第 20 顆、還被記進 celebrated */
+        try { delete lateCelebrate[k.id]; } catch (e) {}
         save(); applyTheme(); renderAll(); openSettings();
         toast(`${k.name} 的頁面已移除`, { ms:4000 });
       } });
@@ -2882,7 +3019,7 @@ function openSettings(){
       const usedE = new Set(state.kids.map(k2 => k2.emoji));
       const em = EMOJIS.find(e2 => !usedE.has(e2)) || '🐥';
       state.kids.push({ id:'k' + nn, name:`寶貝${state.kids.length + 1}`, emoji:em, photo:null, theme:th,
-        celebrated:[], recentReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] });
+        celebrated:[], recentReasons:[], recentDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] });
       save(); renderAll(); openSettings();
       toast('加好了！幫他改個名字吧', { ms:3000 });
     } }));
@@ -2902,8 +3039,8 @@ function openSettings(){
       } });
     bd.append(h('div', { class:'srow' }, h('div', {}, h('div', { text:label }), h('div', { class:'note', text:note })), tg));
   };
-  mkToggle('手打過的原因自動變成選項', '關掉後，手打的蓋章原因只會在「最近用過」出現一陣子、手打的扣除原因不會留下；清單只留你自己加的。', 'autoAddTyped');
-  mkToggle('最近用過的自動排前面', '關掉時，蓋章面板的順序就照下面清單排的來，位置固定好記。', 'recentFirst');
+  mkToggle('手打過的原因自動變成選項', '關掉後，手打的原因（蓋章與扣除都是）只會留在「最近用過」，直到被更新的原因擠掉為止；清單只留你自己加的。', 'autoAddTyped');
+  mkToggle('最近用過的自動排前面', '關掉時，蓋章與扣除面板的順序都照下面清單排的來，位置固定好記。', 'recentFirst');
   const reasonEditor = (rkid, title, note, deduct) => {
     const base = deduct ? DEDUCT_REASONS : REASONS;
     const custom = deduct ? rkid.customDeductReasons : rkid.customReasons;
@@ -2955,8 +3092,9 @@ function openSettings(){
           if (isCustom){
             custom.splice(custom.indexOf(r), 1);
             /* 親手刪掉＝明確說不要了：連「最近用過」也一起拿掉，
-               不然蓋章面板還會靠它多活一陣子，看起來像沒刪成功 */
-            if (!deduct) rkid.recentReasons = rkid.recentReasons.filter(x => x !== r);
+               不然面板還會靠它多活一陣子，看起來像沒刪成功 */
+            if (deduct) rkid.recentDeductReasons = recentsOf(rkid, true).filter(x => x !== r);
+            else rkid.recentReasons = rkid.recentReasons.filter(x => x !== r);
           } else hidden.push(r);
           redraw();
         } }));
@@ -2971,17 +3109,18 @@ function openSettings(){
     }
     /* 關掉自動入列時，手打的字只活在「最近用過」——它們也會出現在蓋章面板，
        所以這裡一定要列得出來、刪得掉；不然就會有「面板看得到、設定頁找不到」的鬼魂 */
-    const temps = (!deduct && !state.settings.autoAddTyped)
-      ? rkid.recentReasons.filter(r => !base.includes(r) && !custom.includes(r) && !hidden.includes(r))
-      : [];
+    const temps = state.settings.autoAddTyped ? []
+      : recentsOf(rkid, deduct).filter(r => !base.includes(r) && !custom.includes(r) && !hidden.includes(r));
     for (const r of temps){
-      wrap.append(h('div', { class:'rtag temp', 'data-r':r }, h('span', { text:r }),
-        h('button', { class:'rx', text:'×', 'aria-label':`拿掉「${r}」`, onclick: () => {
-          rkid.recentReasons = rkid.recentReasons.filter(x => x !== r); redraw();
+      wrap.append(h('div', { class:'rtag temp', 'data-r':r }, h('span', { class:'tmp', text:'暫', 'aria-hidden':'true' }), h('span', { text:r }),
+        h('button', { class:'rx', text:'×', 'aria-label':`拿掉暫時的「${r}」`, onclick: () => {
+          if (deduct) rkid.recentDeductReasons = recentsOf(rkid, true).filter(x => x !== r);
+          else rkid.recentReasons = rkid.recentReasons.filter(x => x !== r);
+          redraw();
         } })));
     }
     bd.append(wrap);
-    if (temps.length) bd.append(h('p', { class:'sub', text:'虛線那幾個是最近手打過的，會在面板出現一陣子；按 × 可以現在就拿掉。' }));
+    if (temps.length) bd.append(h('p', { class:'sub', text:'標「暫」的那幾個是最近手打過的，會留在面板直到被更新的原因擠掉為止；按 × 可以現在就拿掉。' }));
     const inp = h('input', { placeholder: deduct ? '例如：亂丟別人的東西' : '例如：自己倒水沒灑出來', maxlength:'40', 'aria-label': deduct ? '新增扣除的常用原因' : '新增蓋章的常用原因', enterkeyhint:'done' });
     const add = () => {
       const v = inp.value.trim();
@@ -3072,6 +3211,7 @@ function openSettings(){
   if (!cloudOn()){
     bd.append(h('p', { class:'sub', text:'設定一次，之後每次蓋章都會自動把備份傳到你自己 GitHub 帳號的祕密 Gist，換手機時貼同一把金鑰就能整份拿回來。金鑰只存在這支手機，不會進備份檔。' }));
     bd.append(h('p', { class:'sub', text:'老實說在前面：祕密 Gist 不會被搜尋到、網址是猜不到的亂碼，但「知道網址的人」就看得到內容（裡面有孩子的名字、照片與紀錄）。自己用風險很低，但不是零——別把備份網址分享給任何人。' }));
+    bd.append(h('p', { class:'sub', text:'還有一件事：GitHub 會留下每次修改前的舊版本，所以你在 app 裡刪掉的紀錄（誤蓋、扣錯），在那些舊版本裡還讀得到，知道網址的人一樣看得到。想讓某筆真的消失，要按下面的「刪除雲端備份」整份重來，再重新連線。' }));
     bd.append(h('div', { class:'help' }, h('ol', {},
       h('li', {}, '用電腦或手機開 ', h('a', { href:'https://github.com/settings/tokens', target:'_blank', rel:'noopener', style:'color:var(--accent-dark);font-weight:700', text:'github.com/settings/tokens' }), '（要登入 GitHub）'),
       h('li', {}, '「Generate new token (', h('b', { text:'classic' }), ')」→ 名稱隨意、期限選 No expiration'),
@@ -3097,7 +3237,7 @@ function openSettings(){
         if (!existing){
           const ok = await syncCloud(true);
           toast(ok ? '已連線，之後每次改動都會自動備份' : '已連線，但第一次上傳失敗：' + (gist.lastError || ''), { ms:5000 });
-          openSettings(); return;
+          refreshSettings(); return;
         }
         /* 雲端已經有一份備份：先讀回來看清楚，拍板之前絕不上傳
            （讀不到也不上傳——用本機資料蓋掉一份「還救得回來」的雲端備份是最糟的結果） */
@@ -3110,7 +3250,7 @@ function openSettings(){
           /* 讀失敗（可能只是網路抖一下）：凍結上傳，等讀得到、使用者決定了才動雲端 */
           gist.pending = true; gist.lastError = '讀不到雲端備份的內容'; saveGist();
           toast('已連線，但雲端那份備份還讀不出來——先不動它，稍後到設定頁再比對一次。', { ms:6000 });
-          openSettings(); return;
+          refreshSettings(); return;
         }
         if (state.events.length === 0){
           resetRuntime();
@@ -3118,13 +3258,15 @@ function openSettings(){
           gist.remoteStamp = cloudStamp; saveGist();  /* 採用了雲端這個版本，指紋才算數 */
           save(); applyTheme(); renderAll();
           toast('已連線，並從雲端拿回 ' + state.events.length + ' 筆紀錄', { ms:5000 });
-          openSettings(); return;
+          refreshSettings(); return;
         }
         /* 兩邊都有資料：讓使用者決定（選項畫在設定頁上）。
            pending 旗標要落地——關掉 app 再開，凍結也不能失效 */
         gist.pending = true; saveGist();
         pendingCloud = { cloud, stamp: cloudStamp };
-        openSettings();
+        /* 慢網路下家長可能已經關掉設定頁去蓋章：不自己彈回來蓋掉他正在做的事，改用吐司帶路 */
+        if (openSheetId === 'settingsSheet') openSettings();
+        else toast('雲端已經有一份備份——到設定頁選要用哪一份', { ms:6000, action:'去看', onAction: () => { settingsTab = 'backup'; openSettings(); } });
       } catch (e) {
         connectBtn.disabled = false; connectBtn.textContent = '連線';
         toast(errMsg(e, '連線失敗'), { ms:4000 });
@@ -3144,6 +3286,7 @@ function openSettings(){
         resetRuntime();
         state = pendingCloud.cloud;
         gist.remoteStamp = pendingCloud.stamp || null;  /* 採用了這個版本，指紋跟著它 */
+        gist.lastPush = null; gist.pendingPush = null;   /* 舊指紋代表的不再是雲端內容：留著會把別台還原回舊版時誤認成回音 */
         pendingCloud = null;
         gist.pending = false; saveGist();
         save(); applyTheme(); renderAll(); openSettings();
@@ -3151,11 +3294,32 @@ function openSettings(){
       } });
       const useLocal = h('button', { class:'sbtn warn', text:'用這支手機的（覆蓋雲端）', onclick: async () => {
         if (!a2){ a2 = 1; useLocal.textContent = '再按一次確定'; setTimeout(() => { a2 = 0; useLocal.textContent = '用這支手機的（覆蓋雲端）'; }, 4000); return; }
+        /* 覆蓋前再看一眼雲端：這張卡是出卡那一秒的快照，掛著的期間別台可能又寫入了——
+           版本戳變了就重抓、重畫卡片、請家長再確認一次，不能拿舊筆數蓋掉一份沒看過的新內容（第四輪 medium） */
+        useLocal.disabled = true; useLocal.textContent = '確認雲端狀態…';
+        try {
+          const chk = await gfetch('https://api.github.com/gists/' + gist.gistId, {
+            headers: { Authorization: 'Bearer ' + gist.token, Accept: 'application/vnd.github+json' },
+          });
+          if (chk.status === 404){ pendingCloud = null; await freezeForGone(gist); openSettings(); return; }
+          if (chk.ok){
+            const meta = await chk.json();
+            if (meta.updated_at && pendingCloud && meta.updated_at !== pendingCloud.stamp){
+              const r = await fetchCloudContent();
+              if (r && r.raw) pendingCloud = { cloud: normalize(JSON.parse(r.raw)), stamp: r.stamp };
+              openSettings();
+              toast('雲端那份剛剛又被改過了，卡片上的筆數已更新，請再確認一次', { ms:5000 });
+              return;
+            }
+          }
+        } catch (e) { useLocal.disabled = false; useLocal.textContent = '用這支手機的（覆蓋雲端）'; toast(errMsg(e, '連不上，稍後再試'), { ms:3500 }); return; }
         pendingCloud = null;
         gist.pending = false; saveGist();
+        /* 使用者按了兩段確認的最強決定，要能送出去：先解除拿回鈕的凍結，不然 force 上傳會在入口被擋下、誤報「上傳失敗」 */
+        clearTimeout(pullTimer); pullFreeze = false;
         const ok = await syncCloud(true);
         toast(ok ? '已用這支手機的資料覆蓋雲端' : '上傳失敗：' + (gist.lastError || '請稍後再試'), { ms:4000 });
-        openSettings();
+        refreshSettings();
       } });
       crow.append(useCloud, useLocal);
       bd.append(crow);
@@ -3172,13 +3336,13 @@ function openSettings(){
             if (hit){
               gist.gistId = hit.id; gist.remoteStamp = null; saveGist();
               await freezeForConflict(gist);
-              openSettings(); return;
+              refreshSettings(); return;
             }
           } catch (e2) { b.disabled = false; b.textContent = '重新上傳一份'; toast(errMsg(e2, '連不上，稍後再試'), { ms:3500 }); return; }
           gist.pending = false; saveGist();
           const ok3 = await syncCloud(true);
           toast(ok3 ? '重新上傳好了，之後照常自動備份' : '上傳失敗：' + (gist.lastError || '請稍後再試'), { ms:4000 });
-          openSettings();
+          refreshSettings();
         } }),
         h('button', { class:'sbtn warn', text:'中斷雲端備份', onclick: () => {
           gist = null; pendingCloud = null; pullFreeze = false; saveGist();
@@ -3186,7 +3350,7 @@ function openSettings(){
         } })));
     } else if (gist.pending){
       /* 上次連線時沒決定完（或當時雲端讀不出來）：重新讀一次來比對，期間上傳持續凍結 */
-      bd.append(h('div', { class:'warncard', text:'雲端備份跟這支手機還沒對上（連線時兩邊都有資料，或有別台裝置動過），還沒決定要用哪一份——自動上傳先暫停。' }));
+      bd.append(h('div', { class:'warncard', text:'雲端備份跟這支手機還沒對上（連線時兩邊都有資料、有別台裝置動過，或上次比對時網路斷了），還沒決定要用哪一份——自動上傳先暫停。' }));
       bd.append(h('button', { class:'sbtn fill', text:'讀取雲端備份來比對', onclick: async e => {
         const b = e.currentTarget; b.disabled = true; b.textContent = '讀取中…';
         try {
@@ -3194,15 +3358,18 @@ function openSettings(){
           if (r && r.gone){
             /* 那份已經不在雲端：轉成「備份不見了」卡，別再叫人重試網路 */
             if (gist){ gist.gistId = null; saveGist(); }
-            openSettings(); return;
+            refreshSettings(); return;
           }
           if (!r || !r.raw) throw new Error('讀不到內容');
-          if (adoptIfEcho(r)){
-            toast('比對過了：內容跟這支手機一模一樣，已恢復自動同步', { ms:4500 });
-            openSettings(); return;
+          const how = adoptIfEcho(r);
+          if (how){
+            /* 指紋命中只證明「雲端那份是這支手機傳的」，本機多半已經又改過了——不能說一模一樣 */
+            toast(how === 'same' ? '比對過了：內容跟這支手機一模一樣，已恢復自動同步'
+              : '比對過了：雲端那份是這支手機自己傳的，不是別台改的——已恢復自動同步，較新的改動會接著傳上去', { ms:5000 });
+            refreshSettings(); return;
           }
           pendingCloud = { cloud: normalize(JSON.parse(r.raw)), stamp: r.stamp };
-          openSettings();
+          refreshSettings();
         } catch (err) {
           b.disabled = false; b.textContent = '讀取雲端備份來比對';
           toast('還是讀不到，晚點再試（可能沒網路）', { ms:4000 });
@@ -3212,7 +3379,8 @@ function openSettings(){
     const ls = gist.lastSyncAt ? new Date(gist.lastSyncAt) : null;
     bd.append(h('p', { class:'sub', text:
       (ls ? `✅ 已連線。上次同步：${ls.getMonth()+1}/${ls.getDate()} ${pad(ls.getHours())}:${pad(ls.getMinutes())}。` : '已連線，還沒同步成功過。')
-      + (cloudFrozen() ? '自動上傳暫停中——先處理上面那張卡。'
+      + (pullFreeze ? '正在等你確認「從雲端拿回」，幾秒內不動就自動取消。'   /* 拿回鈕的凍結沒有卡片可以「處理」，要單獨講 */
+        : cloudFrozen() ? '自動上傳暫停中——先處理上面那張卡。'
         : gist.lastError ? `（上次錯誤：${gist.lastError}）` : '每次改動 15 秒後與切到背景時自動上傳。') }));
     const cbtns = h('div', { class:'btns' });
     if (!cloudFrozen()) cbtns.append(h('button', { class:'sbtn fill', text:'立刻同步', onclick: async e => {
@@ -3221,8 +3389,9 @@ function openSettings(){
          覆蓋只走卡上那顆兩段確認鈕，不再有一鍵無警告覆蓋 */
       const ok = await syncCloud();
       if (ok) toast('已同步到雲端', { ms:3000 });
+      else if (lastSyncOutcome === 'busy') toast('正在同步中，稍後會再傳一次', { ms:3000 });
       else if (!cloudFrozen()) toast('同步失敗：' + (gist.lastError || '請稍後再試'), { ms:3500 });
-      openSettings();
+      refreshSettings();
     } }));
     let armedCloud = 0, pullCache = null;
     const pullBtn = h('button', { class:'sbtn', text:'從雲端拿回備份', onclick: async () => {
@@ -3232,7 +3401,7 @@ function openSettings(){
         clearTimeout(pullTimer);
         resetRuntime();
         pendingCloud = null; pullFreeze = false;
-        if (gist){ gist.pending = false; gist.remoteStamp = pullCache.stamp || null; saveGist(); }
+        if (gist){ gist.pending = false; gist.remoteStamp = pullCache.stamp || null; gist.lastPush = null; gist.pendingPush = null; saveGist(); }
         state = pullCache.s; pullCache = null; armedCloud = 0;
         save(); applyTheme(); renderAll(); closeSheet();
         toast('已從雲端還原', { ms:3000 });
@@ -3243,32 +3412,42 @@ function openSettings(){
          只是看一眼，不動 remoteStamp（偷看不算同步過） */
       clearTimeout(pullTimer);
       pullFreeze = true;
-      pullBtn.disabled = true;               /* 讀取中不准連按：兩個讀取並行會互踩旗標 */
+      pullBtn.disabled = true; pullBtn.textContent = '讀取中…';   /* 讀取中不准連按：兩個讀取並行會互踩旗標；換字才看得出是在讀，不是壞了 */
       try {
         const r = await fetchCloudContent();
         pullBtn.disabled = false;
         if (r && r.gone){
           pullFreeze = false;
+          /* 拍板卡若正掛著，它的快照已經沒意義：一起清掉，設定頁才會落到「備份不見了」卡，不會吐司說不見了、卡片卻還在問要用哪一份 */
+          pendingCloud = null;
           if (gist){ gist.gistId = null; gist.pending = true; saveGist(); }
           toast('雲端那份備份不見了——到設定頁決定要重傳還是中斷', { ms:4000 });
-          openSettings(); return;
+          refreshSettings(); return;
         }
-        if (!r || !r.raw){ pullFreeze = false; toast('雲端沒有讀到備份', { ms:3000 }); return; }
+        if (!r || !r.raw){ pullFreeze = false; pullBtn.textContent = '從雲端拿回備份'; toast('雲端沒有讀到備份', { ms:3000 }); return; }
         const s = normalize(JSON.parse(r.raw));
         armedCloud = 1; pullCache = { s, stamp: r.stamp };
         pullFreeze = true;                   /* 重申一次：中途若被別的路徑動過，武裝期一定是凍的 */
         clearTimeout(pullTimer);
         pullBtn.textContent = `雲端有 ${s.events.length} 筆，再按一次覆蓋本機`; pullBtn.classList.add('warn');
-        pullTimer = setTimeout(() => { armedCloud = 0; pullCache = null; pullFreeze = false; pullBtn.textContent = '從雲端拿回備份'; pullBtn.classList.remove('warn'); }, 5000);
-      } catch (e) { pullBtn.disabled = false; pullFreeze = false; toast(errMsg(e, '讀取失敗'), { ms:3500 }); }
+        pullTimer = setTimeout(() => {
+          armedCloud = 0; pullCache = null; pullFreeze = false; pullBtn.textContent = '從雲端拿回備份'; pullBtn.classList.remove('warn');
+          /* 武裝期內若設定頁重繪過，狀態列還寫著暫停、「立刻同步」也還藏著：到期補畫一次。
+             正在打字（改名字、貼還原文字）就不動，重繪會把打到一半的東西清掉 */
+          const ae = document.activeElement;
+          const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA');
+          if (openSheetId === 'settingsSheet' && settingsTab === 'backup' && !typing) refreshSettings();
+        }, 5000);
+      } catch (e) { pullBtn.disabled = false; pullBtn.textContent = '從雲端拿回備份'; pullFreeze = false; toast(errMsg(e, '讀取失敗'), { ms:3500 }); }
     } });
-    cbtns.append(pullBtn);
+    /* 拍板卡顯示中不畫拿回鈕：卡上已經有「用雲端的」，這顆是重複入口，還會跟卡上的決定互相踩到凍結旗標 */
+    if (!pendingCloud) cbtns.append(pullBtn);
     /* 真的想把雲端那份刪掉（例如決定不用雲端了）：兩段確認，刪完金鑰也一起斷 */
     let armedDel = 0;
     const delBtn = h('button', { class:'sbtn warn', text:'刪除雲端備份', onclick: async () => {
       if (!gist || !gist.gistId){ toast('雲端目前沒有備份', { ms:2500 }); return; }
       if (!armedDel){
-        armedDel = 1; delBtn.textContent = '再按一次就刪掉雲端那份';
+        armedDel = 1; delBtn.textContent = '再按一次就刪掉雲端那份（連舊版本一起）';
         setTimeout(() => { armedDel = 0; delBtn.textContent = '刪除雲端備份'; }, 5000);
         return;
       }
@@ -3282,7 +3461,7 @@ function openSettings(){
           toast('雲端備份已刪除、連線已中斷。要更保險的話，可以到 GitHub 把金鑰也撤銷。', { ms:6000 });
         } else { throw new Error('GitHub 回應 ' + res.status); }
       } catch (e) { toast('刪除失敗：' + errMsg(e, '請稍後再試'), { ms:3500 }); }
-      openSettings();
+      refreshSettings();
     } });
     cbtns.append(delBtn);
     cbtns.append(h('button', { class:'sbtn warn', text:'中斷連線', onclick: () => {
@@ -3423,7 +3602,7 @@ setInterval(() => { if (!document.hidden && todayKey() !== TODAY) renderAll(); }
 
 /* ───────── 啟動 ───────── */
 load(); loadGist(); applyTheme(); renderAll(); nextTip(); window.__showInstallHint();
-if (cloudOn()) scheduleCloudSync();      /* 開 app 也排一次，把上次沒傳成的補上 */
+if (cloudOn()){ retryEcho().catch(() => {}); scheduleCloudSync(); }      /* 開 app 也排一次，把上次沒傳成的補上；待決的回音先靜默比對 */
 
 /* 慶祝對帳：蓋章當下就存事件，但「慶祝過」要等動畫落地那一秒才存——
    第 10 顆蓋下去的瞬間關掉 app，煙火會永遠漏掉。開機時把「跨過了卻沒慶祝」的滿 10/100 找出來：
@@ -3476,7 +3655,7 @@ setTimeout(() => {
   try { nag = localStorage.getItem(KEY + '.nag'); } catch (e) {}
   if (nag === todayKey()) return;
   try { localStorage.setItem(KEY + '.nag', todayKey()); } catch (e) {}
-  toast('好久沒把備份帶出這支手機了', { ms:9000, action:'去備份', onAction: openSettings });
+  toast('好久沒把備份帶出這支手機了', { ms:9000, action:'去備份', onAction: () => { settingsTab = 'backup'; openSettings(); } });
 }, 2500);
 </script>
 </body>
