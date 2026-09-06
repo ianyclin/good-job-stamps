@@ -161,6 +161,11 @@ svg{display:block}
 }
 /* 名字取到 12 個字也維持單行：塞不下就縮字省略，不許把按鈕擠成兩行 */
 .big span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
+/* 長按蓋好棒（開「一次蓋幾顆」）跟長按扣除同一種語彙：按著時有一條填充從左往右長，放開就退 */
+.big, .pbtn{position:relative; overflow:hidden}
+.big > *, .pbtn > *{position:relative}
+.hfill{position:absolute !important; left:0; top:0; bottom:0; width:0; background:rgba(255,255,255,.28); transition:width .12s; pointer-events:none}
+.holding > .hfill{transition:width .6s linear; width:100%}
 .big:active{transform:scale(.94)}
 .big svg{width:24px; height:24px; --s-fill:#fff; --s-stroke:rgba(0,0,0,.12)}
 
@@ -809,12 +814,13 @@ function fresh(){
       /* 舊版全家共用的自訂原因（保留給舊備份遷移用）；現在每個孩子各一份 */
       customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[],
       autoAddTyped:true, recentFirst:false, addToAll:false, reasonWrap:false,
+      autoKeep:20,   /* 手打自動入列的原因最多留幾個（10／15／20／40＝不限），超過就把最早手打的拿掉 */
     },
     lastKid: 'k1', tipOrder: [], tipIndex: 0,
     kids: [
       /* 預設兩位；家裡不只兩個就用「＋新增一個孩子」，顏色會自動指派沒人用的主題 */
-      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], recentDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
-      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], recentDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
+      { id:'k1', name:'大寶', emoji:'🦁', photo:null, theme:0, celebrated:[], recentReasons:[], recentDeductReasons:[], autoReasons:[], autoDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
+      { id:'k2', name:'二寶', emoji:'🐰', photo:null, theme:1, celebrated:[], recentReasons:[], recentDeductReasons:[], autoReasons:[], autoDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] },
     ],
     events: [],
   };
@@ -846,6 +852,7 @@ function normalize(raw){
       recentFirst: !!rawSet.recentFirst,
       addToAll: !!rawSet.addToAll,
       reasonWrap: !!rawSet.reasonWrap,
+      autoKeep: [10, 15, 20, 40].includes(Number(rawSet.autoKeep)) ? Number(rawSet.autoKeep) : 20,
     },
     lastKid: null, tipOrder: [], tipIndex: 0, kids: [], events: [],
   };
@@ -871,14 +878,28 @@ function normalize(raw){
     let kidId = (validId(k) && usedIds.has(k.id) && !claimed.has(k.id)) ? k.id : null;
     if (!kidId){ let nn = 1; while (usedIds.has('k' + nn) || claimed.has('k' + nn)) nn++; kidId = 'k' + nn; }
     claimed.add(kidId);
+    const customR = Array.isArray(k.customReasons) ? strList(k.customReasons, 40, 40) : [...s.settings.customReasons];
+    const customD = Array.isArray(k.customDeductReasons) ? strList(k.customDeductReasons, 40, 40) : [...s.settings.customDeductReasons];
+    /* 「手打自動入列」名單：有存的就用存的（濾掉已不在清單裡的幽靈）。
+       舊備份沒有這份名單：把「蓋章／扣除時真的用過」的自訂原因當成手打入列、依最後一次用到的時間由舊到新排——
+       作者抱怨越積越多的正是更新前那一批，不遷移的話「最多留幾個」對它們永遠不生效。
+       設定頁親手加但從沒用過的不會被算進去 */
+    const migrateAuto = (stored, custom, type) => {
+      if (Array.isArray(stored)) return strList(stored, 40, 40).filter(r => custom.includes(r));
+      const last = {};
+      for (const e of (Array.isArray(raw.events) ? raw.events : [])){
+        if (e && e.kid === k.id && e.type === type && typeof e.reason === 'string' && custom.includes(e.reason)) last[e.reason] = Math.max(last[e.reason] || 0, Number(e.ts) || 0);
+      }
+      return custom.filter(r => r in last).sort((a, b) => last[a] - last[b]);
+    };
     return {
       id: kidId,
       name: (str(k.name, 12).trim()) || (d ? d.name : `寶貝${i + 1}`),
       emoji,
       /* 常用原因每個孩子各一份；舊備份只有全家共用的那份時，每個孩子先繼承它 */
-      customReasons: Array.isArray(k.customReasons) ? strList(k.customReasons, 40, 40) : [...s.settings.customReasons],
+      customReasons: customR,
       hiddenReasons: Array.isArray(k.hiddenReasons) ? strList(k.hiddenReasons, 40, 40) : [...s.settings.hiddenReasons],
-      customDeductReasons: Array.isArray(k.customDeductReasons) ? strList(k.customDeductReasons, 40, 40) : [...s.settings.customDeductReasons],
+      customDeductReasons: customD,
       hiddenDeductReasons: Array.isArray(k.hiddenDeductReasons) ? strList(k.hiddenDeductReasons, 40, 40) : [...s.settings.hiddenDeductReasons],
       /* 設定頁拖出來的順序（含內建與自訂）；不在清單裡的照原本順序接在後面 */
       reasonOrder: strList(k.reasonOrder, 40, 90),
@@ -893,6 +914,9 @@ function normalize(raw){
         .filter((n, i, a) => a.indexOf(n) === i).sort((a, b) => a - b).slice(-500),
       recentReasons: strList(k.recentReasons, 60, 6),
       recentDeductReasons: strList(k.recentDeductReasons, 60, 6),
+      /* 哪些自訂原因是「手打自動入列」的（依先後順序）：設定頁親手加的不在裡面，不會被「最多留幾個」拿掉 */
+      autoReasons: migrateAuto(k.autoReasons, customR, 'plus'),
+      autoDeductReasons: migrateAuto(k.autoDeductReasons, customD, 'minus'),
     };
   });
 
@@ -1366,7 +1390,7 @@ function addAdjust(kidId, n, reason){
 }
 function monthStats(kid, y, m){
   const p = `${y}-${pad(m+1)}-`;
-  const ev = eventsOf(kid).filter(e => e.date.startsWith(p));
+  const ev = eventsOf(kid).filter(e => e.date.startsWith(p) && !inFlight.has(e.id));   /* 還在飛的落地才算 */
   return { plus: ev.filter(e => e.type==='plus').length, minus: ev.filter(e => e.type==='minus').length };
 }
 function dayMap(kid){
@@ -1421,13 +1445,40 @@ function rememberReason(kid, r, deduct){
   else kid.recentReasons = [r, ...kid.recentReasons.filter(x => x !== r)].slice(0, 6);
   const base = deduct ? DEDUCT_REASONS : REASONS;
   const custom = deduct ? kid.customDeductReasons : kid.customReasons;
+  const auto = autoListOf(kid, deduct);
   /* 手打過的原因自動變成這個孩子的常用選項（設定頁可以關掉；關掉時只留在「最近用過」）。
      滿 40 就不收——跟設定頁的上限行為一致，不無聲擠掉使用者自己排好的舊原因 */
   if (state.settings.autoAddTyped && !base.includes(r) && !custom.includes(r)){
-    if (custom.length < 40) custom.push(r);
+    if (custom.length < 40){ custom.push(r); auto.push(r); trimAutoReasons(kid, deduct); }
     /* 滿了要說：設定頁加第 41 個會吐司，面板手打卻無聲不收，家長下次找不到會以為沒記到 */
     else toast('自訂原因已經 40 個了，這一句只記在這顆星星上；到設定頁刪幾個再手打就會收進清單', { ms:4500 });
+  } else if (auto.includes(r)){
+    /* 再用到就算最近：搬到最後，「最多留幾個」拿掉的才會是真的沒在用的 */
+    auto.splice(auto.indexOf(r), 1); auto.push(r);
   }
+}
+const autoListOf = (kid, deduct) => {
+  if (deduct){ if (!Array.isArray(kid.autoDeductReasons)) kid.autoDeductReasons = []; return kid.autoDeductReasons; }
+  if (!Array.isArray(kid.autoReasons)) kid.autoReasons = []; return kid.autoReasons;
+};
+/* 「手打的原因最多留幾個」：超過就把最早手打（且之後沒再用）的從清單拿掉。
+   只動自動入列的那些，設定頁親手加的不在 auto 名單裡，永遠不會被這裡拿掉；紀錄裡的原因文字不受影響 */
+function trimAutoReasons(kid, deduct){
+  const keep = state.settings.autoKeep || 40;
+  const auto = autoListOf(kid, deduct);
+  const custom = deduct ? kid.customDeductReasons : kid.customReasons;
+  while (auto.length > keep){
+    const old = auto.shift();
+    const ci = custom.indexOf(old); if (ci >= 0) custom.splice(ci, 1);
+  }
+}
+/* 從這個孩子的清單裡拿掉一個自訂原因：常用清單、自動入列名單、最近用過三處一起 */
+function dropCustom(kid, r, deduct){
+  const custom = deduct ? kid.customDeductReasons : kid.customReasons;
+  const ci = custom.indexOf(r); if (ci >= 0) custom.splice(ci, 1);
+  const auto = autoListOf(kid, deduct); const ai = auto.indexOf(r); if (ai >= 0) auto.splice(ai, 1);
+  if (deduct) kid.recentDeductReasons = recentsOf(kid, true).filter(x => x !== r);
+  else kid.recentReasons = kid.recentReasons.filter(x => x !== r);
 }
 /* 改選原因時，把「這一次蓋章才自動加進清單／最近」的舊字收回——
    打錯字修正後，錯字不能永遠留在常用清單裡。只收這張工單加的，原本就在清單裡的不動 */
@@ -1436,14 +1487,13 @@ function swapRemember(job, kid2, newR){
   job.autoAdded = job.autoAdded || {};
   const old = job.autoAdded[kid2.id];
   if (old && old !== newR){
-    const ci = kid2.customReasons.indexOf(old);
-    if (ci >= 0) kid2.customReasons.splice(ci, 1);
-    kid2.recentReasons = kid2.recentReasons.filter(x => x !== old);
+    dropCustom(kid2, old, false);                   /* 常用清單、自動入列名單、最近用過三處一起，別留幽靈占「最多留幾個」的位子 */
     delete job.autoAdded[kid2.id];
   }
-  const wasThere = !newR || REASONS.includes(newR) || kid2.customReasons.includes(newR) || kid2.recentReasons.includes(newR);
+  /* 「原本就在清單裡」只看內建與自訂清單：只在「最近用過」裡的字這次是真的會被 push 進清單，撤銷時要收得回來 */
+  const wasThere = !newR || REASONS.includes(newR) || kid2.customReasons.includes(newR);
   rememberReason(kid2, newR);
-  if (!wasThere) job.autoAdded[kid2.id] = newR;
+  if (!wasThere && kid2.customReasons.includes(newR)) job.autoAdded[kid2.id] = newR;
 }
 
 /* 累積了一些紀錄、又超過 14 天沒把備份帶出這支手機，就該提醒了。
@@ -1511,7 +1561,8 @@ function switchKid(id){
 
 /* ───────── 2. 總數區 ───────── */
 function renderHero(){
-  const k = cur(); const n = netOf(k.id);
+  const k = cur(); const fly = inFlightCount(k.id);
+  const n = Math.max(0, netOf(k.id) - fly);   /* 還在飛的那幾顆落地才算進畫面；飛行中扣一顆不能讓數字變負 */
   $('heroNum').textContent = n;
   const dots = $('dots'); dots.textContent = '';
   for (let i = 0; i < 10; i++) dots.append(h('i', { class: i < n % 10 ? 'on' : '' }));
@@ -1528,8 +1579,8 @@ function renderHero(){
   /* 第二行：隨時看得到「總好棒」可以換幾顆（使用者拍板：可兌換數要常駐主畫面；
      「一共蓋過／扣過」的歷史統計退到紀錄頁看）。大數字照舊是收集數，不因兌換變少 */
   const all = eventsOf(k.id);
-  const totalPlus = all.filter(e => e.type === 'plus').length;
-  const W = walletOf(k.id);
+  const totalPlus = all.filter(e => e.type === 'plus').length - fly;   /* 第二行也等落地才算，跟大數字同步 */
+  const W = Math.max(0, walletOf(k.id) - fly);
   const hasEcon = all.some(e => e.type === 'redeem' || e.type === 'adjust');
   const el = $('heroTotal'); el.textContent = '';
   let totalText = '';
@@ -1570,7 +1621,7 @@ function renderCalendar(){
     const day = i - startDow + 1;
     if (day < 1 || day > dim){ grid.append(h('div', { class:'cell blank' })); continue; }
     const key = `${view.y}-${pad(view.m+1)}-${pad(day)}`;
-    grid.append(buildCell(key, day, map[key] || []));
+    grid.append(buildCell(key, day, (map[key] || []).filter(e => !inFlight.has(e.id))));
   }
   if (focusDate){ const again = grid.querySelector(`[data-date="${focusDate}"]`); if (again) try { again.focus({ preventScroll:true }); } catch (e) {} }
   /* 滑到別的月份時，給一條看得見的路回來（點標題那個彩蛋沒人知道） */
@@ -1886,6 +1937,11 @@ function closeSheet(){
     if (again) try { again.focus({ preventScroll:true }); } catch (e) {}
   }
   setTimeout(() => { if (!openSheetId || $(openSheetId) !== el) sheetHidden(el, true); }, 260);
+  /* 佇列結束／慶祝完時被 sheet 壓住的原因面板：sheet 收完再開（那顆章還在、60 秒內） */
+  const pp = pendingPanel; pendingPanel = null;
+  if (pp && Date.now() - pp.at < 60000 && state.events.some(e => e.id === pp.job.id)){
+    setTimeout(() => { if (!openSheetId && !$('review').classList.contains('on')) showReasonPanel(pp.job); }, 300);
+  }
 }
 $('scrim').onclick = closeSheet;
 /* Esc（外接鍵盤／switch control）也能關 */
@@ -1951,6 +2007,7 @@ function chipPicker(list, opt){
 function addStamp(kidId, date, reason, quick){
   const ev = { id:newId(), kid:kidId, type:'plus', date, ts:Date.now(), reason:reason || '' };
   state.events.push(ev);
+  inFlight.add(ev.id);                              /* 落地（land）才從畫面上長出來 */
   if (reason) rememberReason(kidById(kidId), reason);
   save();
   /* 動畫的大字是全 app 最大聲的一句話：有原因就唸出那件事（過程讚美），
@@ -1993,11 +2050,15 @@ const Q = []; let playing = false; let lastQuick = null;
 /* 整份資料被換掉（還原快照/雲端/貼上）時，把排隊中的動畫與面板狀態全部清掉：
    殘留的工單會對「還原後的資料」寫入不屬於它的里程碑 */
 function resetRuntime(){
-  Q.length = 0; lastQuick = null; rpJob = null;
+  Q.length = 0; lastQuick = null; rpJob = null; pendingPanel = null; inFlight.clear();
   try { hideReasonPanel(); } catch (e) {}
   /* 整份資料被換掉時，開機算好的「待補慶祝」也全部作廢——那是舊資料的帳 */
   try { for (const k in lateCelebrate) delete lateCelebrate[k]; } catch (e) {}
 }
+/* 還在飛（排隊中、動畫沒落地）的那幾顆：月曆與總數區先不畫它們，落地一顆才多一顆——
+   一次蓋五顆時星星要一顆一顆出現，不是先出現五顆再播五次動畫（作者回報） */
+const inFlight = new Set();
+const inFlightCount = kid => state.events.reduce((n, e) => n + (e.kid === kid && inFlight.has(e.id) ? 1 : 0), 0);
 function enqueue(job){ Q.push(job); if (!playing) runQueue(); }
 async function runQueue(){
   playing = true; let n = 0;
@@ -2012,6 +2073,9 @@ async function runQueue(){
       /* 這顆若在排隊期間被刪掉（或整份資料被還原），慶祝與里程碑都不能再算它的 */
       if (!state.events.some(e => e.id === job.id)) continue;
       const kid = kidById(job.kid);
+      /* 里程碑用「落地當下畫面上的數字」判，不用寫入當下算好的 job.net：
+         批次飛行中若扣了一顆，job.net 會指到一個畫面上從沒到過的數，慶祝寫 10、數字卻是 9，還把 10 記進 celebrated 害真的滿 10 不播 */
+      job.net = netOf(job.kid) - inFlightCount(job.kid);
       const m = kid ? milestoneFor(kid, job.net) : null;
       if (m){
         job.milestone = m;                          /* 記在工單上：撤銷時才知道「是這一顆觸發的」 */
@@ -2029,6 +2093,9 @@ async function runQueue(){
     /* 家長若在動畫期間開了別的面板，原因面板別鑽到遮罩底下變成點不到的鬼影 */
     if (lastQuick){
       if (!openSheetId && !$('review').classList.contains('on')) showReasonPanel(lastQuick);
+      /* 家長剛好開著 sheet（例如再點一次格子確認有沒有記到）：面板先留著，sheet 關掉再開——
+         不然這一批的「拿掉這 N 顆」與手足同記從此無路可走 */
+      else pendingPanel = { job: lastQuick, at: Date.now() };
       lastQuick = null;
     }
   }
@@ -2047,7 +2114,7 @@ function targetPoint(ev){
 }
 async function playStamp(ev, opt){
   /* 批次蓋（「還有誰也做了」）：資料與里程碑照走，動畫只做一聲輕響 */
-  if (ev.mini){ SFX.chime(); land(ev); await wait(150); return; }
+  if (ev.mini){ if (state.events.some(e => e.id === ev.id)) SFX.chime(); land(ev); await wait(150); return; }   /* 排隊中被收回的不再叮 */
   const layer = $('stampLayer'), st = $('stampEl'), fl = $('flash'), tx = $('stampTxt'), app = $('app');
   const W = innerWidth, H = innerHeight, cx = W/2, cy = H*.42;
   const base = `translate(${cx-70}px,${cy-70}px)`;
@@ -2114,6 +2181,7 @@ async function playStamp(ev, opt){
 }
 /* 動畫落地：重畫格子、新那顆星 pop、總數 bump、進度點 pop */
 function land(ev){
+  inFlight.delete(ev.id);
   renderAll();
   if (ev.kid !== state.lastKid) return;
   const cell = $('grid').querySelector(`[data-date="${ev.date}"]`);
@@ -2123,7 +2191,7 @@ function land(ev){
     cell.classList.add('flash'); setTimeout(() => cell.classList.remove('flash'), 250);
   }
   anim($('heroNum'), [{ transform:'scale(1.25)' }, { transform:'scale(1)' }], 200);
-  const n = netOf(ev.kid); const d = $('dots').children[(n-1+10) % 10];
+  const n = netOf(ev.kid) - inFlightCount(ev.kid); const d = $('dots').children[(n-1+10) % 10];
   if (d && n % 10 !== 0) anim(d, [{ transform:'scale(0)' }, { transform:'scale(1.4)', offset:.6 }, { transform:'scale(1)' }], 200);
 }
 
@@ -2188,7 +2256,11 @@ async function celebrateTen(kid, T, anchorId){
   lay.classList.remove('on');
   lay.setAttribute('aria-hidden', 'true');
   await anim(b, [{ transform:'translateY(0)' }, { transform:'translateY(-120%)' }], 200);
-  if (panelWasOpen && rpJob && state.events.some(e => e.id === rpJob.id)) showReasonPanel(rpJob);
+  if (panelWasOpen && rpJob && state.events.some(e => e.id === rpJob.id)){
+    /* 慶祝期間家長若開了 sheet（例如雙擊跳過時第二下點到總數區），面板不能開在遮罩底下：等 sheet 關掉再開 */
+    if (!openSheetId && !$('review').classList.contains('on')) showReasonPanel(rpJob);
+    else pendingPanel = { job: rpJob, at: Date.now() };
+  }
 }
 
 /* ───────── 大慶祝（滿 100） ───────── */
@@ -2260,11 +2332,16 @@ async function celebrateHundred(kid, T){
   try { take.focus({ preventScroll:true }); } catch (err) {}
   setTimeout(() => { if (!closed) skip.classList.add('on'); }, 3000);
   await done;
-  if (panelWasOpen && rpJob && state.events.some(e => e.id === rpJob.id)) showReasonPanel(rpJob);
+  if (panelWasOpen && rpJob && state.events.some(e => e.id === rpJob.id)){
+    /* 慶祝期間家長若開了 sheet（例如雙擊跳過時第二下點到總數區），面板不能開在遮罩底下：等 sheet 關掉再開 */
+    if (!openSheetId && !$('review').classList.contains('on')) showReasonPanel(rpJob);
+    else pendingPanel = { job: rpJob, at: Date.now() };
+  }
 }
 
 /* ───────── 原因面板（快速蓋章後） ───────── */
 let rpTimer = 0, rpJob = null;
+let pendingPanel = null;   /* {job, at}：佇列結束或慶祝完時 sheet 正開著，面板延到 closeSheet 再開（60 秒內有效） */
 function rpArm(){
   clearTimeout(rpTimer);
   /* 「其他…」的輸入框展開著＝家長正在打字：不倒數。打字本身不算觸碰，
@@ -2276,7 +2353,8 @@ function showReasonPanel(job){
   rpJob = job;
   const kid = kidById(job.kid);
   const nBatch = job.batchIds ? job.batchIds.length : 1;
-  $('reasonPanel').querySelector('.ttl span').textContent = nBatch > 1 ? `這 ${nBatch} 顆是因為什麼？（可以不填）` : '加上原因？（可以不填）';
+  /* 標題帶名字：批次飛行中切到別的孩子，面板會在別人的頁面上冒出來，沒名字會寫錯人 */
+  $('reasonPanel').querySelector('.ttl span').textContent = nBatch > 1 ? `${kid.name} 這 ${nBatch} 顆是因為什麼？（可以不填）` : `${kid.name} 做了什麼？（可以不填）`;
   $('rpUndo').textContent = nBatch > 1 ? `蓋錯了，拿掉這 ${nBatch} 顆` : '蓋錯了，拿掉這顆';
   const chips = $('rpChips'); chips.textContent = '';
   $('rpCustom').classList.add('hide'); $('rpInput').value = '';
@@ -2288,6 +2366,7 @@ function showReasonPanel(job){
   for (const r of reasonChipsFor(kid)){
     chips.append(h('button', { class:'chip', text:r, 'aria-pressed':'false', onclick: e => {
       chips.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.setAttribute('aria-pressed', 'false'); });
+      $('rpCustom').classList.add('hide');   /* 按過「其他…」又改點現成的：輸入框收回去，10 秒倒數才會重新啟動 */
       e.currentTarget.classList.add('on');
       e.currentTarget.setAttribute('aria-pressed', 'true');
       setReason(job, r);
@@ -2333,36 +2412,14 @@ function showSibs(job, reason){
       const oj = job.sibStamps[s.id];
       if (oj){
         /* 收回＝這一批當作沒發生：只收「這一批真的觸發過」的慶祝（batchRef 上有記），不用數字去猜 */
-        const skid = kidById(s.id);
-        const why = blockRemoveReason(s.id, oj.jobs.length, 0);
-        if (why){ toast(why, { ms:4500 }); rpArm(); return; }
-        let removed = 0;
-        for (const j2 of oj.jobs){
-          const i2 = state.events.findIndex(e2 => e2.id === j2.id);
-          if (i2 >= 0){ state.events.splice(i2, 1); removed++; }
-        }
-        if (removed && skid){
-          const cel = (oj.batchRef && oj.batchRef.celebrated) || [];
-          if (cel.length){
-            skid.celebrated = skid.celebrated.filter(m => !cel.includes(m));
-            state.events = state.events.filter(e2 => !(e2.type === 'gold' && e2.kid === skid.id && cel.includes(e2.n) && e2.ts >= (oj.firstTs || 0)));
-          }
-          /* 這一次蓋章才寫進他清單的原因也一併收回 */
-          if (job.autoAdded && job.autoAdded[s.id]){
-            const w = job.autoAdded[s.id];
-            const ci = skid.customReasons.indexOf(w);
-            if (ci >= 0) skid.customReasons.splice(ci, 1);
-            skid.recentReasons = skid.recentReasons.filter(x => x !== w);
-            delete job.autoAdded[s.id];
-          }
-          save(); renderAll();
-        }
-        delete job.sibStamps[s.id];
+        const res = undoSibEntry(job, s.id);
+        if (res.why){ toast(res.why, { ms:4500 }); rpArm(); return; }
+        if (res.removed){ save(); renderAll(); }
         showSibs(job, reason); rpArm();
         return;
       }
       const k2o = kidById(s.id);
-      const wasThere = !reason || REASONS.includes(reason) || (k2o && (k2o.customReasons.includes(reason) || k2o.recentReasons.includes(reason)));
+      const wasThere = !reason || REASONS.includes(reason) || (k2o && k2o.customReasons.includes(reason));
       /* 同一批共用 batchRef：跨過的滿 10/100 記在上面，收回時整批一起收 */
       const ent = { jobs: [], batchRef: { celebrated: [] }, firstTs: 0 };
       for (let i2 = 0; i2 < nB; i2++){
@@ -2374,7 +2431,7 @@ function showSibs(job, reason){
         }
         ent.jobs.push(sj); enqueue(sj);
       }
-      if (!wasThere){ job.autoAdded = job.autoAdded || {}; job.autoAdded[s.id] = reason; }
+      if (!wasThere && k2o && k2o.customReasons.includes(reason)){ job.autoAdded = job.autoAdded || {}; job.autoAdded[s.id] = reason; }
       job.sibStamps[s.id] = ent;
       showSibs(job, reason); rpArm();
     } }, avaFace(s, 20), ` ${s.name}${cur2 ? ` 也蓋了${nB > 1 ? ` ${nB} 顆` : ''} ✓` : ''}`);
@@ -2435,7 +2492,8 @@ $('rpUndo').onclick = () => {
       kid.celebrated = kid.celebrated.filter(m => !cel.includes(m));
       state.events = state.events.filter(e => !(e.type === 'gold' && e.kid === kid.id && cel.includes(e.n) && e.ts >= (rpJob.batchFirstTs || 0)));
       undoAutoAdded(rpJob, kid);
-      save(); renderAll(); toast(`已撤銷這 ${removed} 顆`);
+      const sib = undoSibStamps(rpJob);
+      save(); renderAll(); toast(undoToast(`已撤銷這 ${removed} 顆`, sib), { ms: sib.blocked.length ? 4500 : 2500 });
     }
     hideReasonPanel(); return;
   }
@@ -2454,7 +2512,8 @@ $('rpUndo').onclick = () => {
       }
     }
     undoAutoAdded(rpJob, kid);
-    save(); renderAll(); toast('已撤銷');
+    const sib = undoSibStamps(rpJob);
+    save(); renderAll(); toast(undoToast('已撤銷', sib), { ms: sib.blocked.length ? 4500 : 2500 });
   }
   hideReasonPanel();
 };
@@ -2463,10 +2522,52 @@ $('rpUndo').onclick = () => {
 function undoAutoAdded(job, kid){
   const w = job && job.autoAdded && kid && job.autoAdded[kid.id];
   if (!w) return;
-  const ci = kid.customReasons.indexOf(w); if (ci >= 0) kid.customReasons.splice(ci, 1);
-  kid.recentReasons = kid.recentReasons.filter(x => x !== w);
+  dropCustom(kid, w, false);
   delete job.autoAdded[kid.id];
 }
+/* 收回幫某個手足蓋的那一批（「再按一次收回」與主孩子的「蓋錯了，拿掉這顆」共用）：
+   事件、這一批真的觸發過的慶祝與金章、這一次才寫進他清單的原因，一起當作沒發生。
+   回傳 {removed, why}：why 有值表示被帳務守門擋下（那幾顆已被扣除或兌換抵掉），什麼都沒動 */
+function undoSibEntry(job, sid){
+  const oj = job && job.sibStamps && job.sibStamps[sid];
+  const skid = kidById(sid);
+  if (!oj || !skid){ if (job && job.sibStamps) delete job.sibStamps[sid]; return { removed:0, why:null }; }
+  const why = blockRemoveReason(sid, oj.jobs.length, 0);
+  if (why) return { removed:0, why };
+  let removed = 0;
+  for (const j2 of oj.jobs){
+    const i2 = state.events.findIndex(e2 => e2.id === j2.id);
+    if (i2 >= 0){ state.events.splice(i2, 1); removed++; }
+  }
+  if (removed){
+    const cel = (oj.batchRef && oj.batchRef.celebrated) || [];
+    if (cel.length){
+      skid.celebrated = skid.celebrated.filter(m => !cel.includes(m));
+      state.events = state.events.filter(e2 => !(e2.type === 'gold' && e2.kid === skid.id && cel.includes(e2.n) && e2.ts >= (oj.firstTs || 0)));
+    }
+    undoAutoAdded(job, skid);
+  }
+  delete job.sibStamps[sid];
+  return { removed, why:null };
+}
+/* 主孩子按「蓋錯了，拿掉這顆」：幫手足蓋的那幾批也一起收回（作者回報：以前只收第一位） */
+function undoSibStamps(job){
+  const names = [], blocked = [];
+  if (!job || !job.sibStamps) return { names, blocked };
+  for (const sid of Object.keys(job.sibStamps)){
+    const skid = kidById(sid);
+    const res = undoSibEntry(job, sid);
+    if (res.why && skid) blocked.push(skid.name);
+    else if (res.removed && skid) names.push(skid.name);
+  }
+  return { names, blocked };
+}
+const undoToast = (base, sib) => {
+  let t = base;
+  if (sib.names.length) t += `（連同 ${sib.names.join('、')} 的）`;
+  if (sib.blocked.length) t += `；${sib.blocked.join('、')} 的已被扣除或兌換抵掉，沒有收回`;
+  return t;
+};
 /* 面板內任何觸碰都重新計時：家長滑選項滑到一半、轉頭跟孩子講話，面板不該自己溜走。
    focusin 也算（VoiceOver 的探索是 focus，不發 pointerdown） */
 $('reasonPanel').addEventListener('pointerdown', () => { if ($('reasonPanel').classList.contains('on')) rpArm(); });
@@ -2477,10 +2578,17 @@ document.addEventListener('pointerdown', e => {
 
 /* ───────── 主按鈕：今天好棒！ ───────── */
 /* 大按鈕：點一下蓋一顆；按住不放（跟扣除同一種語彙）打開「一次蓋幾顆」 */
+/* 按住時的填充：跟扣除鈕同一種回饋，放開或到點就退 */
+function attachHoldFill(btn){
+  btn.prepend(h('div', { class:'hfill', 'aria-hidden':'true' }));
+  btn.addEventListener('pointerdown', () => btn.classList.add('holding'));
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => btn.addEventListener(t, () => btn.classList.remove('holding')));
+}
 let bigHoldTimer = 0, bigSuppress = false;
+attachHoldFill($('bigBtn'));
 $('bigBtn').addEventListener('pointerdown', () => {
   clearTimeout(bigHoldTimer);
-  bigHoldTimer = setTimeout(() => { bigSuppress = true; SFX.tick(); openMulti(); }, 600);
+  bigHoldTimer = setTimeout(() => { bigSuppress = true; $('bigBtn').classList.remove('holding'); SFX.tick(); openMulti(); }, 600);
 });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => $('bigBtn').addEventListener(t, () => {
   clearTimeout(bigHoldTimer);
@@ -2566,9 +2674,12 @@ function openDay(key){
   const btn = h('button', { class:'pbtn', onclick: async () => {
     if (daySuppress){ daySuppress = false; return; }   /* 長按放開時的 click 不能又蓋一顆 */
     const reason = picker.value();
+    /* 先記下這個字原本在不在清單：不在的話是這一次才自動加進去的，改選或撤銷時要收得回來（跟主按鈕路徑一致） */
+    const wasThere = !reason || REASONS.includes(reason) || kid.customReasons.includes(reason);
     /* quick=true：蓋完也開原因面板。原因已經選好的話面板會直接帶出「這件事，還有誰也做了？」——
        小技巧與說明書都說蓋完選原因會出現那一排，作者習慣的就是這條格子路，以前它根本不開面板（第四輪 medium） */
     const job = addStamp(kid.id, key, reason, true);
+    if (!wasThere && kid.customReasons.includes(reason)) job.autoAdded = { [kid.id]: reason };
     closeSheet();
     /* 如果畫面停在別的月份，先翻回這一天所在的月份，
        不然印章會飛去總數、格子也不會亮，看起來像「章不知道蓋到哪去了」 */
@@ -2579,9 +2690,10 @@ function openDay(key){
     await wait(260);                                   /* 等 sheet 收完再量格子座標 */
     enqueue(job);
   } }, svgStar(), h('span', { text:'蓋好棒！' }));
+  attachHoldFill(btn);
   btn.addEventListener('pointerdown', () => {
     clearTimeout(dayHold);
-    dayHold = setTimeout(() => { daySuppress = true; SFX.tick(); openMulti(key); }, 600);
+    dayHold = setTimeout(() => { daySuppress = true; btn.classList.remove('holding'); SFX.tick(); openMulti(key); }, 600);
   });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => btn.addEventListener(t, () => {
     clearTimeout(dayHold);
@@ -2688,14 +2800,17 @@ function openDeduct(key){
     if (netOf(kid.id) <= 0){ closeSheet(); toast('目前沒有可以扣的星星', { ms:2500 }); return; }
     if (walletOf(kid.id) <= 0){ closeSheet(); toast('總好棒已經用完（換掉或調整掉了）——先處理兌換或調整，才能再扣', { ms:4000 }); return; }
     const reason = picker.value();
+    /* 這個字原本不在清單＝這一次才自動入列：按「復原」時要一起收回，不然錯字留在扣除清單裡 */
+    const wasThere = !reason || DEDUCT_REASONS.includes(reason) || kid.customDeductReasons.includes(reason);
     state.events.push({ id:newId(), kid:kid.id, type:'minus', date:key, ts:Date.now(), reason });
     rememberReason(kid, reason, true); save();
+    const autoAdded = (!wasThere && kid.customDeductReasons.includes(reason)) ? reason : null;
     closeSheet();
     /* 跟三條蓋章路一樣翻回那一天所在的月份：−N 是扣除在月曆上唯一的可見回饋，
        停在別的月份時扣一顆，不翻月就只看到大數字少一顆（deductFeedback 裡的 renderAll 會重畫） */
     const dm = parseKey(key);
     if (dm.getFullYear() !== view.y || dm.getMonth() !== view.m) view = { y:dm.getFullYear(), m:dm.getMonth() };
-    deductFeedback(kid.id, key);
+    deductFeedback(kid.id, key, autoAdded);
   };
   hold.addEventListener('pointerdown', e => {
     if (timer) return; pid = e.pointerId; hold.classList.add('holding');
@@ -2792,14 +2907,20 @@ function openRedeem(){
   bd.append(h('button', { class:'lnk', text:'關閉', onclick: closeSheet, style:'margin:8px auto 0' }));
   openSheet('deductSheet');
 }
-function deductFeedback(kidId, key){
+function deductFeedback(kidId, key, autoAdded){
   const old = $('heroNum').textContent;
   renderAll();
   const cell = $('grid').querySelector(`[data-date="${key}"] .m`); if (cell) cell.classList.add('fade');
   const num = $('heroNum'); if (num.textContent !== old) anim(num, [{ opacity:0 }, { opacity:1 }], 300);
   SFX.minus();
   const last = state.events[state.events.length-1];
-  setTimeout(() => toast('已扣一顆。記得把原因說給孩子聽。', { ms:4000, action:'復原', onAction: () => { if (removeEvent(last.id)){ renderAll(); toast('已復原'); } } }), 400);
+  setTimeout(() => toast('已扣一顆。記得把原因說給孩子聽。', { ms:4000, action:'復原', onAction: () => {
+    if (removeEvent(last.id)){
+      /* 復原＝這一顆從來沒發生：這一次才自動入列的扣除原因也收回 */
+      const kk = kidById(kidId); if (autoAdded && kk) dropCustom(kk, autoAdded, true);
+      save(); renderAll(); toast('已復原');
+    }
+  } }), 400);
 }
 let kbDeductAt = 0;
 $('minusBtn').onclick = () => {
@@ -3019,7 +3140,7 @@ function openSettings(){
       const usedE = new Set(state.kids.map(k2 => k2.emoji));
       const em = EMOJIS.find(e2 => !usedE.has(e2)) || '🐥';
       state.kids.push({ id:'k' + nn, name:`寶貝${state.kids.length + 1}`, emoji:em, photo:null, theme:th,
-        celebrated:[], recentReasons:[], recentDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] });
+        celebrated:[], recentReasons:[], recentDeductReasons:[], autoReasons:[], autoDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] });
       save(); renderAll(); openSettings();
       toast('加好了！幫他改個名字吧', { ms:3000 });
     } }));
@@ -3041,6 +3162,20 @@ function openSettings(){
   };
   mkToggle('手打過的原因自動變成選項', '關掉後，手打的原因（蓋章與扣除都是）只會留在「最近用過」，直到被更新的原因擠掉為止；清單只留你自己加的。', 'autoAddTyped');
   mkToggle('最近用過的自動排前面', '關掉時，蓋章與扣除面板的順序都照下面清單排的來，位置固定好記。', 'recentFirst');
+  {
+    /* 手打自動入列的原因會越積越多（作者回報）：讓家長選最多留幾個，超過就把最早手打、之後沒再用的拿掉 */
+    const keep = state.settings.autoKeep || 40;
+    const opts = h('div', { class:'chips', style:'flex:0 0 auto;gap:6px;margin:0' });
+    for (const [v, label] of [[10, '10'], [15, '15'], [20, '20'], [40, '不限']]){
+      opts.append(h('button', { class:'chip' + (keep === v ? ' on' : ''), text:label, 'aria-pressed': keep === v ? 'true' : 'false', onclick: () => {
+        state.settings.autoKeep = v;
+        for (const kk of state.kids){ trimAutoReasons(kk, false); trimAutoReasons(kk, true); }
+        save(); openSettings();
+      } }));
+    }
+    bd.append(h('div', { class:'srow' }, h('div', {}, h('div', { text:'手打的原因最多留幾個' }),
+      h('div', { class:'note', text:'超過就把最早手打、之後沒再用的從清單拿掉（設定頁親手加而沒用過的不算；紀錄裡寫的原因不受影響）。選了數字會立刻整理一次。' })), opts));
+  }
   const reasonEditor = (rkid, title, note, deduct) => {
     const base = deduct ? DEDUCT_REASONS : REASONS;
     const custom = deduct ? rkid.customDeductReasons : rkid.customReasons;
@@ -3090,11 +3225,9 @@ function openSettings(){
       const tag = h('div', { class:'rtag' + (isCustom ? ' mine' : ''), 'data-r':r }, grab, h('span', { text:r }),
         h('button', { class:'rx', text:'×', 'aria-label': isCustom ? `刪掉「${r}」` : `收起「${r}」`, onclick: () => {
           if (isCustom){
-            custom.splice(custom.indexOf(r), 1);
-            /* 親手刪掉＝明確說不要了：連「最近用過」也一起拿掉，
+            /* 親手刪掉＝明確說不要了：常用清單、自動入列名單、「最近用過」三處一起拿掉，
                不然面板還會靠它多活一陣子，看起來像沒刪成功 */
-            if (deduct) rkid.recentDeductReasons = recentsOf(rkid, true).filter(x => x !== r);
-            else rkid.recentReasons = rkid.recentReasons.filter(x => x !== r);
+            dropCustom(rkid, r, deduct);
           } else hidden.push(r);
           redraw();
         } }));
