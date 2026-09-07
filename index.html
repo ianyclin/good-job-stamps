@@ -294,6 +294,11 @@ svg{display:block}
 .sheet .sub{font-size:14px; color:rgba(var(--ink-rgb),.82); line-height:1.55; margin:0 0 12px}
 .sheet .sub.warn{color:var(--dim)}
 .sheet .sec{font-size:13px; color:var(--dim); margin:16px 0 8px}
+/* 可摺疊區塊的標題列：長得像 .sec，但它其實是一顆按鈕。
+   用在「進階：GitHub 雲端備份」——一般家長不會用到，收起來才不會擋住真正該做的匯出 */
+.sheet .secBtn{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:44px; text-align:left; background:none; border:0; padding:0; font-weight:700}
+.sheet .secBtn i{font-style:normal; font-size:14px; flex:0 0 auto; transition:transform .18s}
+.sheet .secBtn[aria-expanded="true"] i{transform:rotate(180deg)}
 .pbtn{width:100%; height:64px; border-radius:18px; border:0; background:var(--accent-dark); color:#fff; font-size:20px; font-weight:800; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px}
 .pbtn svg{width:24px; height:24px; --s-fill:#fff; --s-stroke:rgba(0,0,0,.12)}
 .pbtn:active{transform:scale(.97)}
@@ -571,6 +576,8 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
 <div class="sheet" id="deductSheet" role="dialog" aria-modal="true" aria-label="扣除一顆"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="deductBd"></div></div>
 <div class="sheet" id="recordsSheet" role="dialog" aria-modal="true" aria-label="全部紀錄"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="recordsBd"></div></div>
 <div class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="設定"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="settingsBd"></div></div>
+<!-- 第一次打開才出現的引導：用一般的 sheet，inert／焦點／Esc 全部沿用 -->
+<div class="sheet" id="welcomeSheet" role="dialog" aria-modal="true" aria-label="第一次使用"><div class="hd"><i aria-hidden="true"></i><button class="shx">關閉</button></div><div class="bd" id="welcomeBd"></div></div>
 
 <script>
 'use strict';
@@ -815,6 +822,7 @@ function fresh(){
       customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[],
       autoAddTyped:true, recentFirst:false, addToAll:false, reasonWrap:false,
       autoKeep:20,   /* 手打自動入列的原因最多留幾個（10／15／20／40＝不限），超過就把最早手打的拿掉 */
+      onboarded:false,   /* 第一次打開的引導看過了沒（設定頁「其他」可以再看一次） */
     },
     lastKid: 'k1', tipOrder: [], tipIndex: 0,
     kids: [
@@ -853,6 +861,10 @@ function normalize(raw){
       addToAll: !!rawSet.addToAll,
       reasonWrap: !!rawSet.reasonWrap,
       autoKeep: [10, 15, 20, 40].includes(Number(rawSet.autoKeep)) ? Number(rawSet.autoKeep) : 20,
+      /* 舊備份沒有這個欄位：已經有紀錄的就當作看過了——正在用的手機不該被引導打擾 */
+      onboarded: rawSet.onboarded === undefined
+        ? (Array.isArray(raw.events) && raw.events.length > 0)
+        : !!rawSet.onboarded,
     },
     lastKid: null, tipOrder: [], tipIndex: 0, kids: [], events: [],
   };
@@ -1537,13 +1549,16 @@ function renderKids(){
   for (const k of state.kids){
     const t = theme(k);
     const b = h('button', { class:'kid' + (k.id === state.lastKid ? ' on' : '') + (stampedToday(k.id) ? '' : ' nodot'),
-      style:`--k-accent:${t.accent};--k-dark:${t.accentDark}`, 'aria-label':`切換到 ${k.name}`, 'aria-pressed': k.id === state.lastKid ? 'true' : 'false',
+      style:`--k-accent:${t.accent};--k-dark:${t.accentDark}`,
+      /* 頭像上的灰點（今天還沒蓋）只有眼睛看得到：旁白也要講出來 */
+      'aria-label':`切換到 ${k.name}${stampedToday(k.id) ? '' : '，今天還沒蓋章'}`, 'aria-pressed': k.id === state.lastKid ? 'true' : 'false',
       onclick: () => switchKid(k.id) },
       h('div', { class:'ava' }, k.photo ? h('img', { class:'face', src:k.photo, alt:'' }) : k.emoji), h('span', { class:'nd' }),
       h('div', { class:'nm', text:k.name }), h('div', { class:'bar' }));
     host.append(b);
   }
-  const g = h('button', { class:'gear' + (backupOverdue() ? ' stale' : ''), 'aria-label':'設定', onclick: openSettings });
+  /* 齒輪旁的小灰點也一樣：看得到的提醒，旁白也要聽得到 */
+  const g = h('button', { class:'gear' + (backupOverdue() ? ' stale' : ''), 'aria-label': backupOverdue() ? '設定（該備份了）' : '設定', onclick: openSettings });
   g.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><i class="bd"></i>';
   host.append(g);
 }
@@ -1903,12 +1918,28 @@ function sheetHidden(el, hide){
   try { el.inert = !!hide; } catch (e) {}
   if (hide) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden');
 }
+/* 遮罩底下的主畫面也要真的關起來：不設 inert 的話，外接鍵盤 Shift+Tab
+   可以走到被蓋住的月曆與按鈕上（第四輪列為未修）。#toast 在 #app 外面，
+   吐司上的「去看／復原」不會被鎖住。 */
+function backdropInert(on){
+  for (const id of ['app', 'reasonPanel']){
+    const el = $(id);
+    if (el) try { el.inert = !!on; } catch (e) {}
+  }
+}
+/* 現在畫面上還有沒有別的遮罩層開著？有的話就別急著把主畫面放行 */
+function anyOverlayOpen(){
+  return !!openSheetId || $('review').classList.contains('on') || $('big').classList.contains('on');
+}
+/* 保險絲：慶祝或面板若在關閉前拋例外，inert 可能留著把整個主畫面鎖死——回到前景時沒有任何遮罩就放行 */
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !anyOverlayOpen()) backdropInert(false); });
 document.querySelectorAll('.sheet').forEach(s => sheetHidden(s, true));
 function openSheet(id){
   const already = openSheetId === id;
   if (openSheetId && openSheetId !== id){ const prev = $(openSheetId); prev.classList.remove('open'); sheetHidden(prev, true); }
   if (!already && !openSheetId) sheetOpener = document.activeElement;   /* 關閉後把焦點還回去 */
   openSheetId = id; $('scrim').classList.add('on');
+  backdropInert(true);
   sheetHidden($(id), false);
   $(id).classList.add('open');
   hideReasonPanel();
@@ -1925,6 +1956,11 @@ function closeSheet(){
   if (!openSheetId) return;
   const el = $(openSheetId);
   el.classList.remove('open'); $('scrim').classList.remove('on'); openSheetId = null;
+  /* 引導不管從哪條路關掉（開始蓋章、×、Esc、點遮罩、下拉），都算看過了：
+     不然每次開 app 都要再跳一次。要重看的話設定頁「其他」有按鈕 */
+  if (el.id === 'welcomeSheet' && state && !state.settings.onboarded){ state.settings.onboarded = true; save(); }
+  /* 還有別的遮罩層（回顧、滿 100）開著就先別放行，不然焦點會鑽到它們底下 */
+  if (!anyOverlayOpen()) backdropInert(false);
   const back = sheetOpener; sheetOpener = null;
   if (back && back.isConnected){ try { back.focus({ preventScroll:true }); } catch (e) {} }
   else if (back){
@@ -2233,9 +2269,19 @@ async function celebrateTen(kid, T, anchorId){
   lay.setAttribute('aria-hidden', 'false');
   lay.style.pointerEvents = 'auto';               /* 慶祝期間由這層滿版覆蓋接住點擊，跳過時才不會誤按到底下的按鈕 */
   if (reduceMotion()){
-    slots.forEach(s => s.classList.add('lit'));
+    slots.forEach(s => s.classList.add('lit'));   /* 十顆一次點亮：不做逐顆的縮放動畫 */
     SFX.ten();                                    /* 減少動態 ≠ 靜音 */
-    await wait(1400);
+    /* 但十件事還是要一句一句唸過去——這個儀式的意義在那十句話，不在動畫。
+       跟正常模式一樣可以點一下跳過（十句 × 700ms） */
+    let skipped = false;
+    const skip = tapToSkip(10 * 700);
+    skip.then(() => { skipped = true; });
+    for (let i = 0; i < 10; i++){
+      if (skipped) break;
+      const r = recent[i] && recent[i].reason;
+      line.textContent = r || '';                 /* 沒寫原因的那顆留白，不沿用上一句 */
+      await wait(700);
+    }
   } else {
     for (let i = 0; i < 10; i++){
       await wait(115);
@@ -2276,6 +2322,7 @@ async function celebrateHundred(kid, T){
   $('bigH1').style.opacity = '0'; $('bigH2').style.opacity = '0'; take.classList.remove('on'); skip.classList.remove('on');
   star.style.opacity = '0'; halo.style.opacity = '0';
   big.classList.add('on'); void big.offsetWidth; big.style.opacity = '1';
+  backdropInert(true);                            /* 滿版的慶祝畫面：底下的主畫面先關起來，鍵盤與 VoiceOver 都走不進去 */
 
   let closed = false, finish = null;
   const done = new Promise(res => { finish = res; });
@@ -2288,6 +2335,7 @@ async function celebrateHundred(kid, T){
       state.events.push({ id:newId(), kid:kid.id, type:'gold', date:todayKey(), ts:Date.now(), reason:'', n:T }); save();
       await wait(300);
       big.style.opacity = '0'; await wait(250); big.classList.remove('on');
+      if (!anyOverlayOpen()) backdropInert(false);
       renderAll();
       /* 讓孩子親眼看到自己收下的金星飛進今天的格子——儀式跟永久紀錄才連得起來 */
       /* 只有畫面正顯示這個孩子時才飛：借別人的格子飛會變成視覺上說謊 */
@@ -2305,6 +2353,7 @@ async function celebrateHundred(kid, T){
       }
     } else {
       big.style.opacity = '0'; await wait(300); big.classList.remove('on');
+      if (!anyOverlayOpen()) backdropInert(false);
       renderAll();
     }
     /* 備份提醒是行政事務，別踩進情感時刻——晚幾秒再說 */
@@ -2316,14 +2365,20 @@ async function celebrateHundred(kid, T){
 
   try {
     SFX.hundred();
-    anim(halo, [{ transform:'scale(.5)', opacity:.5 }, { transform:'scale(2)', opacity:0 }], 400);
-    await anim(star, [{ transform:'scale(0) rotate(-180deg)', opacity:0 }, { transform:'scale(1.2) rotate(0deg)', opacity:1, offset:.7 }, { transform:'scale(1) rotate(0deg)', opacity:1 }], { duration:400, easing:'cubic-bezier(.34,1.56,.64,1)' });
+    /* 減少動態：光暈不放大、星星不旋轉不彈跳、標題不彈入——通通只淡入。
+       儀式還在（聲音、煙火、收下金星都照舊），會讓人暈的那幾下拿掉 */
+    const rm = reduceMotion();
+    anim(halo, rm ? [{ opacity:.5 }, { opacity:0 }] : [{ transform:'scale(.5)', opacity:.5 }, { transform:'scale(2)', opacity:0 }], 400);
+    await anim(star, rm ? [{ opacity:0 }, { opacity:1 }]
+      : [{ transform:'scale(0) rotate(-180deg)', opacity:0 }, { transform:'scale(1.2) rotate(0deg)', opacity:1, offset:.7 }, { transform:'scale(1) rotate(0deg)', opacity:1 }],
+      rm ? 300 : { duration:400, easing:'cubic-bezier(.34,1.56,.64,1)' });
     FX.firework(.25, '#F5C542'); SFX.boom();
     FX.confettiRain(200, 3);
     setTimeout(() => { if (!closed){ FX.firework(.5, theme(kid).accent); SFX.boom(); } }, 500);
     setTimeout(() => { if (!closed){ FX.firework(.75, '#FFFFFF'); SFX.boom(); } }, 1000);
     await wait(200);
-    anim($('bigH1'), [{ transform:'scale(.6)', opacity:0 }, { transform:'scale(1)', opacity:1 }], { duration:220, easing:'cubic-bezier(.34,1.56,.64,1)' });
+    anim($('bigH1'), rm ? [{ opacity:0 }, { opacity:1 }] : [{ transform:'scale(.6)', opacity:0 }, { transform:'scale(1)', opacity:1 }],
+      rm ? 300 : { duration:220, easing:'cubic-bezier(.34,1.56,.64,1)' });
     await wait(150);
     anim($('bigH2'), [{ opacity:0 }, { opacity:1 }], 300);
     await wait(250);
@@ -2936,6 +2991,9 @@ $('minusBtn').onclick = () => {
 let recordsDays = 40;
 let reasonEditKidId = null;      /* 設定頁「常用原因」目前在編輯哪個孩子 */
 let settingsTab = 'kids';        /* 設定頁目前的次分頁 */
+/* 備份分頁的「進階：GitHub 雲端備份」有沒有展開，重繪時要保持。
+   null＝家長還沒自己開關過，照預設走（已連線、或有卡片要處理，就展開） */
+let cloudAdvOpen = null;
 let lastSettingsTab = null;
 let lastSnapCount = 0;           /* 快照清單上次的筆數：重繪時先佔位，版面不跳 */
 function openRecords(keepPage){
@@ -3017,14 +3075,21 @@ function openReview(){
   }
   $('rvFoot').textContent = evs.length ? `（問問 ${kid.name}：你最喜歡哪一件？哪一件最難？）` : '';
   $('review').classList.add('on');
+  backdropInert(true);                              /* 回顧是滿版的：底下的月曆與按鈕一律關起來 */
   try { $('rvClose').focus({ preventScroll:true }); } catch (e) {}
 }
-$('rvClose').onclick = () => $('review').classList.remove('on');
+$('rvClose').onclick = () => {
+  $('review').classList.remove('on');
+  if (!anyOverlayOpen()) backdropInert(false);
+};
 
 /* ───────── 設定頁 ───────── */
 function openSettings(){
   const bd = $('settingsBd');
-  if (cloudOn() && cloudFrozen() && openSheetId !== 'settingsSheet') settingsTab = 'backup';   /* 雲端還在等你決定時，一打開就帶到備份分頁（但不鎖住其他分頁） */
+  if (cloudOn() && cloudFrozen() && openSheetId !== 'settingsSheet'){
+    settingsTab = 'backup';   /* 雲端還在等你決定時，一打開就帶到備份分頁（但不鎖住其他分頁） */
+    cloudAdvOpen = true;      /* 卡片畫在進階區裡：收著的話會被帶到分頁卻什麼都看不到 */
+  }
   /* 重繪不要把人彈回頁首：點一下原因標籤、換個顏色都會整頁重建；換分頁才回到頂 */
   const st0 = (openSheetId === 'settingsSheet' && lastSettingsTab === settingsTab) ? bd.scrollTop : 0;
   lastSettingsTab = settingsTab;
@@ -3299,6 +3364,15 @@ function openSettings(){
 
   }
   if (settingsTab === 'other'){
+  /* 說明書放最上面：分享給別的家庭時，第一個要找得到的就是它 */
+  bd.append(h('div', { class:'btns', style:'margin-top:8px' },
+    h('button', { class:'sbtn fill', text:'使用說明（可以印給阿公阿嬤）', onclick: () => window.open('manual.html', '_blank', 'noopener') }),
+    h('button', { class:'sbtn', text:'重看第一次的說明', onclick: () => {
+      state.settings.onboarded = false; save();
+      openWelcome();
+    } })));
+  bd.append(h('p', { class:'note sub', style:'margin-top:8px', text:'用 Safari 開，可以列印。' }));   /* .note 目前只有 .srow 裡有樣式，加 .sub 才是小字灰字 */
+
   bd.append(h('div', { class:'sec', text:'音效' }));
   const tg = h('button', { class:'toggle' + (state.settings.sound ? ' on' : ''), role:'switch', 'aria-checked': state.settings.sound ? 'true' : 'false', 'aria-label':'蓋章與慶祝音效',
     onclick: () => { state.settings.sound = !state.settings.sound; save(); tg.classList.toggle('on', state.settings.sound); tg.setAttribute('aria-checked', state.settings.sound ? 'true' : 'false'); if (state.settings.sound) SFX.chime(); } });
@@ -3339,8 +3413,14 @@ function openSettings(){
     if (list.length > 12) snapBox.append(h('p', { class:'sub', style:'margin-top:8px', text:`還有 ${list.length - 12} 份較早的快照。` }));
   }).catch(() => { snapBox.textContent = ''; snapBox.append(h('p', { class:'sub', text:'這台裝置不支援自動快照，請多用下面的手動備份。' })); });
 
-  /* ── 雲端自動備份（GitHub Gist）── */
-  bd.append(h('div', { class:'sec', text:'雲端自動備份（GitHub）' }));
+  /* ── 進階：雲端自動備份（GitHub Gist）──
+     這一整段的節點先在這裡做好，最後才接到「還原」下面：
+     備份分頁的順序是「快照 → 匯出 → 還原 → 進階」，先讓家長看到真正該做的那一件。
+     底下的程式碼一行沒改，只是把 bd 換成這個容器（同名的影子變數）。 */
+  const advOpen = cloudAdvOpen === null ? (cloudOn() || !!cloudFrozen()) : cloudAdvOpen;
+  const advBox = h('div', { id:'cloudAdv' });
+  if (advOpen){
+  const bd = advBox;
   if (!cloudOn()){
     bd.append(h('p', { class:'sub', text:'設定一次，之後每次蓋章都會自動把備份傳到你自己 GitHub 帳號的祕密 Gist，換手機時貼同一把金鑰就能整份拿回來。金鑰只存在這支手機，不會進備份檔。' }));
     bd.append(h('p', { class:'sub', text:'老實說在前面：祕密 Gist 不會被搜尋到、網址是猜不到的亂碼，但「知道網址的人」就看得到內容（裡面有孩子的名字、照片與紀錄）。自己用風險很低，但不是零——別把備份網址分享給任何人。' }));
@@ -3604,14 +3684,22 @@ function openSettings(){
     } }));
     bd.append(cbtns);
   }
+  }   /* ← if (advOpen) 到此為止；advBox 在「還原」後面才接上畫面 */
 
   bd.append(h('div', { class:'sec', text:'匯出備份（帶得走的那一份）' }));
   const lb = state.settings.lastBackupAt ? new Date(state.settings.lastBackupAt) : null;
   const daysAgo = lb ? Math.floor((Date.now() - lb.getTime()) / 864e5) : null;
   if (daysAgo === null || daysAgo >= 14){
-    bd.append(h('div', { class:'warncard', text: lb
-      ? `已經 ${daysAgo} 天沒有匯出備份了。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。`
-      : '還沒有匯出過備份。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。' }));
+    /* 雲端三天內同步成功過的話，資料其實不只在這支手機上：語氣放輕，但還是要講——
+       金鑰弄丟、GitHub 進不去的時候，救得回來的是「檔案」裡那一份 */
+    const cloudFresh = cloudOn() && gist.lastSyncAt && Date.now() - new Date(gist.lastSyncAt).getTime() < 3 * 864e5;
+    if (cloudFresh){
+      bd.append(h('p', { class:'sub', text:'雲端有一份了；偶爾也傳一份到「檔案」，金鑰弄丟時還救得回來。' }));
+    } else {
+      bd.append(h('div', { class:'warncard', text: lb
+        ? `已經 ${daysAgo} 天沒有匯出備份了。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。`
+        : '還沒有匯出過備份。自動快照跟紀錄放在同一支手機，手機掉了或 app 被刪掉就都沒了 —— 花十秒傳一份出去吧。' }));
+    }
   }
   bd.append(h('p', { class:'sub', text:`${cloudOn() ? '除了上面你自己設定的雲端備份，資料不會傳到任何其他地方。' : '資料只存在這支手機的這個 app 裡，不會上傳到任何地方。'}換手機、清除網站資料、或把主畫面上的圖示刪掉，這支手機上的紀錄都會不見。${lb ? `上次匯出：${lb.getFullYear()}/${lb.getMonth()+1}/${lb.getDate()}（${daysAgo} 天前）` : ''}` }));
   const btns = h('div', { class:'btns' });
@@ -3676,11 +3764,19 @@ function openSettings(){
   file.addEventListener('change', () => { const f = file.files[0]; if (!f) return; f.text().then(t => { rta.value = t; check(t); }); });
   bd.append(rta, h('div', { class:'btns' }, h('button', { class:'sbtn', text:'選備份檔', onclick: () => file.click() }), confirmBtn), preview, file);
 
+  /* 進階區放最後，而且收著：要自己去 GitHub 申請金鑰，一般家庭用不到。
+     已經連線、或有卡片等著拍板時才預設展開（不然家長會找不到那張卡） */
+  const advBtn = h('button', { class:'sec secBtn', 'aria-expanded': advOpen ? 'true' : 'false', 'aria-controls':'cloudAdv', onclick: () => {
+    cloudAdvOpen = !advOpen;
+    openSettings();
+    /* 重繪會把這顆按鈕整個換掉：把焦點接回新的那顆，鍵盤與 VoiceOver 才不會掉到 body */
+    const nb = $('settingsBd').querySelector('.secBtn');
+    if (nb) try { nb.focus({ preventScroll:true }); } catch (e) {}
+  } }, h('span', { text:'進階：GitHub 雲端自動備份（要自己申請金鑰，一般不用）' }), h('i', { text:'⌄', 'aria-hidden':'true' }));
+  bd.append(advBtn, advBox);
+
   }
   if (settingsTab === 'other'){
-  bd.append(h('div', { class:'sec', text:'使用說明書' }));
-  bd.append(h('p', { class:'sub' }, '怎麼蓋、怎麼備份、給阿公阿嬤的三句話，都在 ', h('a', { href:'manual.html', target:'_blank', style:'color:var(--accent-dark);font-weight:700', text:'使用說明書' }), ' 裡（可以印出來貼冰箱）。'));
-
   bd.append(h('div', { class:'sec', text:'裝到 iPhone 主畫面' }));
   bd.append(h('div', { class:'help' }, h('ol', {}, h('li', { text:'用 Safari 打開這個網址' }), h('li', {}, '點下方的 ', h('b', { text:'分享' }), ' 按鈕（方框加向上箭頭）'), h('li', {}, '選 ', h('b', { text:'加入主畫面' }), ' → 右上角「新增」')),
     h('p', { class:'sub', text:'之後從主畫面圖示打開，會像 app 一樣全螢幕，沒網路也能用。' }),
@@ -3691,6 +3787,79 @@ function openSettings(){
       style:'color:var(--accent-dark);font-weight:700;text-decoration:none', text:'指數三寶飯' }), ' ・ 版權所有'));
   }
   openSheet('settingsSheet');
+  bd.scrollTop = st0;
+}
+
+/* ───────── 第一次打開的引導 ─────────
+   只做三件事：說清楚這個 app 是給誰用的、把孩子的名字改對、（iPhone 上）提醒先加到主畫面。
+   走一般的 sheet，inert／焦點／Esc 都跟其他面板一樣。 */
+function openWelcome(){
+  const bd = $('welcomeBd');
+  /* 加一個／移除一個孩子會整頁重畫：捲動位置留著，不要把人彈回最上面 */
+  const st0 = openSheetId === 'welcomeSheet' ? bd.scrollTop : 0;
+  bd.textContent = '';
+  bd.append(h('h2', { text:'歡迎使用好棒印章' }));
+  bd.append(h('p', { class:'sub', text:'好棒印章是給家長用的：孩子做到一件小事，就蓋一顆。星星是紀錄，不是薪水。' }));
+
+  bd.append(h('div', { class:'sec', text:'孩子的名字' }));
+  /* 名字改在輸入框裡，按「開始蓋章！」才寫回去；中途按新增或移除也會先把打好的名字收起來，
+     不然重畫一次就白打了 */
+  const inputs = [];
+  const commitNames = () => {
+    for (const [k, inp] of inputs){
+      const v = inp.value.trim().slice(0, 12);
+      if (v) k.name = v;                          /* 留白就維持原名，不讓孩子變成沒有名字 */
+    }
+  };
+  for (const k of state.kids){
+    const inp = h('input', { value:k.name, maxlength:'12', placeholder:'名字', 'aria-label':'孩子的名字', enterkeyhint:'done' });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
+    inputs.push([k, inp]);
+    const row = h('div', { class:'inrow' }, inp);
+    /* 最少留一個孩子。引導階段還沒有任何紀錄，移除不必三段確認 */
+    if (state.kids.length > 1){
+      row.append(h('button', { class:'sbtn warn', style:'height:44px;padding:0 14px;font-size:15px;flex:0 0 auto;background:none', text:'移除', 'aria-label':`移除 ${k.name}`, onclick: () => {
+        commitNames();
+        state.kids = state.kids.filter(kk => kk !== k);
+        if (state.lastKid === k.id) state.lastKid = state.kids[0].id;
+        if (reasonEditKidId === k.id) reasonEditKidId = state.kids[0].id;
+        save(); applyTheme(); renderAll(); openWelcome();
+      } }));
+    }
+    bd.append(row);
+  }
+  if (state.kids.length < 5){
+    bd.append(h('button', { class:'sbtn', style:'width:100%;margin-top:10px', text:'＋ 再加一個孩子', onclick: () => {
+      commitNames();
+      /* 跟設定頁同一套：id 撿第一個沒人用的 kN，顏色與貼圖也挑沒人用的 */
+      let nn = 1; while (state.kids.some(k2 => k2.id === 'k' + nn)) nn++;
+      const usedT = new Set(state.kids.map(k2 => k2.theme));
+      let th = 0; while (usedT.has(th) && th < THEMES.length - 1) th++;
+      const usedE = new Set(state.kids.map(k2 => k2.emoji));
+      const em = EMOJIS.find(e2 => !usedE.has(e2)) || '🐥';
+      state.kids.push({ id:'k' + nn, name:`寶貝${state.kids.length + 1}`, emoji:em, photo:null, theme:th,
+        celebrated:[], recentReasons:[], recentDeductReasons:[], autoReasons:[], autoDeductReasons:[], customReasons:[], hiddenReasons:[], customDeductReasons:[], hiddenDeductReasons:[], reasonOrder:[], deductReasonOrder:[] });
+      save(); renderAll(); openWelcome();
+    } }));
+  }
+  bd.append(h('p', { class:'sub', style:'margin-top:10px', text:'頭像、顏色、之後要不要再加一個孩子，設定頁裡都改得動。' }));
+
+  /* 還在 Safari 分頁裡用（沒加到主畫面）：這一步最重要，資料才不會被 Safari 清掉 */
+  if (showInstallStep){
+    bd.append(h('div', { class:'sec', text:'先加到主畫面' }));
+    bd.append(h('p', { class:'sub', text:'先用 Safari 下面的「分享」→「加入主畫面」，從主畫面打開才會像 app，資料也才不會被 Safari 清掉。' }));
+  }
+
+  bd.append(h('p', { class:'sub', style:'margin-top:14px' }, '更多用法在設定頁的 ',
+    h('button', { class:'lnk', style:'display:inline; margin:0; padding:0; color:var(--accent-dark); font-weight:700; min-height:0', text:'使用說明',
+      onclick: () => window.open('manual.html', '_blank', 'noopener') }), ' 裡。'));
+
+  bd.append(h('button', { class:'pbtn', text:'開始蓋章！', onclick: () => {
+    commitNames();
+    state.settings.onboarded = true;
+    save(); applyTheme(); renderAll(); closeSheet();
+  } }));
+  openSheet('welcomeSheet');
   bd.scrollTop = st0;
 }
 
@@ -3710,9 +3879,11 @@ function openSettings(){
 })();
 
 /* ───────── 非主畫面模式的提示 ───────── */
+let showInstallStep = false;   /* 在 iPhone 的 Safari 分頁裡開的（還沒加到主畫面）：引導要多講「加入主畫面」那一步 */
 (() => {
   const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  showInstallStep = ios && !standalone;
   $('ihClose').onclick = () => { $('installHint').classList.remove('on'); state.settings.hintDismissed = true; save(); };
   window.__showInstallHint = () => { if (ios && !standalone && !state.settings.hintDismissed) $('installHint').classList.add('on'); };
 })();
@@ -3735,6 +3906,7 @@ setInterval(() => { if (!document.hidden && todayKey() !== TODAY) renderAll(); }
 
 /* ───────── 啟動 ───────── */
 load(); loadGist(); applyTheme(); renderAll(); nextTip(); window.__showInstallHint();
+if (!state.settings.onboarded) openWelcome();   /* 第一次打開：先講清楚這是什麼、把名字改對 */
 if (cloudOn()){ retryEcho().catch(() => {}); scheduleCloudSync(); }      /* 開 app 也排一次，把上次沒傳成的補上；待決的回音先靜默比對 */
 
 /* 慶祝對帳：蓋章當下就存事件，但「慶祝過」要等動畫落地那一秒才存——
@@ -3783,6 +3955,7 @@ addEventListener('pointerdown', function askPersist(){
 
 /* 開 app 時提醒備份，但一天最多講一次，不要變成另一種嘮叨 */
 setTimeout(() => {
+  if (openSheetId === 'welcomeSheet') return;   /* 第一次打開的引導還開著：別在上面壓一句備份嘮叨 */
   if (!backupOverdue()) return;
   let nag = null;
   try { nag = localStorage.getItem(KEY + '.nag'); } catch (e) {}
