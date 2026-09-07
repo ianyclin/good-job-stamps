@@ -56,14 +56,15 @@ svg{display:block}
 .kid .ava{
   width:54px; height:54px; border-radius:50%; background:var(--card);
   border:2px solid var(--k-accent); font-size:30px; line-height:1;
-  display:grid; place-items:center; position:relative;
-  transition:transform .2s ease, border-color .2s ease, border-width .2s ease;
+  display:grid; place-items:center; position:relative; opacity:.8;
+  transition:transform .2s ease, border-color .2s ease, border-width .2s ease, box-shadow .2s ease, opacity .2s ease;
 }
-.kid.on .ava{transform:scale(1.12); border:3px solid var(--k-dark)}
+/* 選中的孩子：頭像外圈一圈主題色柔和底盤（不佔版面，只是光暈），名字下面照舊有一條 .bar */
+.kid.on .ava{transform:scale(1.12); border:3px solid var(--k-dark); opacity:1; box-shadow:0 0 0 4px rgba(var(--accent-rgb),.25)}
 .kid.bounce .ava{animation:kidBounce .22s ease-out}
 @keyframes kidBounce{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1.12)}}
-.kid .nm{font-size:14px; max-width:min(104px, 100%); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.kid.on .nm{font-weight:700}
+.kid .nm{font-size:14px; max-width:min(104px, 100%); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:rgba(var(--ink-rgb),.72); transition:color .2s ease}
+.kid.on .nm{font-weight:700; color:var(--ink)}
 .kid .bar{width:24px; height:4px; border-radius:2px; background:var(--accent-dark); opacity:0; transition:opacity .2s}
 .kid.on .bar{opacity:1}
 /* 四、五個孩子時縮小頭像 */
@@ -73,6 +74,11 @@ svg{display:block}
 .kids.n5 .ava{width:42px; height:42px; font-size:23px}
 .kids.n5 .nm{font-size:12px; max-width:min(62px, 100%)}
 .kids.n5 .nd{right:calc(50% - 24px)}
+/* 頭像變小時底盤也跟著收一圈，四、五個孩子並排才不會互相碰到 */
+.kids.n4 .kid.on .ava, .kids.n5 .kid.on .ava{box-shadow:0 0 0 3px rgba(var(--accent-rgb),.25)}
+/* 換孩子：整列重建是瞬間換人，補一個很短的淡入讓眼睛跟得上 */
+.kids.swap{animation:kidsIn .15s ease-out}
+@keyframes kidsIn{from{opacity:.55}to{opacity:1}}
 /* 設定頁次分頁 */
 .stabs{display:flex; gap:6px; margin:2px 0 14px; position:sticky; top:0; background:var(--card); padding:6px 0; z-index:3}
 .stab{flex:1; height:40px; border-radius:12px; border:1.5px solid rgba(0,0,0,.14); background:none; color:var(--ink); font-size:15px; font-weight:700}
@@ -86,7 +92,8 @@ svg{display:block}
 .gear.stale .bd{display:block}
 
 /* ───────── 2. 星星總數區 ───────── */
-.hero{flex:1 0 96px; max-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:none; border:0; width:100%; padding:0}
+/* 總數區不吃餘裕：高機型多出來的高度全部讓給月曆（格子才長得高），這裡只佔內容需要的高度 */
+.hero{flex:0 0 auto; min-height:96px; max-height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:none; border:0; width:100%; padding:0}
 .hero-row{display:flex; align-items:center; gap:14px}
 .hero-star{width:36px; height:36px}
 .hero-num{font-size:56px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-1px}
@@ -94,34 +101,46 @@ svg{display:block}
 .dots i{width:8px; height:8px; border-radius:50%; border:1.5px solid var(--accent-dark); display:block; transition:background-color .2s}
 .dots i.on{background:var(--accent); border-color:var(--accent)}
 .hero-sub{font-size:14px; color:rgba(var(--ink-rgb),.78); margin-top:6px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+/* 主句是「再 X 顆滿 Y」（倒數才是這一行的重點），這個月的統計退成小一號的次句 */
+.hero-sub .hs-main{font-size:14px; font-weight:600; color:var(--ink)}
+.hero-sub .hs-side{font-size:13px; color:rgba(var(--ink-rgb),.72)}
 /* 第二行：總好棒現在可以換幾顆（歷史累計退到紀錄頁看） */
 .hero-total{font-size:13px; color:rgba(var(--ink-rgb),.74); margin-top:3px; max-width:94vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .hero-total b{font-weight:800; color:var(--accent-dark); font-size:14px}
 
 /* ───────── 3. 月曆 ───────── */
 /* 不可壓縮：螢幕不夠高時整頁改用捲動（#app overflow-y:auto），月曆最後一排不能被裁掉 */
-.cal{flex:2 0 auto; padding:0 16px; display:flex; flex-direction:column; justify-content:center; position:relative}
+.cal{flex:1 0 auto; min-height:0; padding:0 16px; display:flex; flex-direction:column; justify-content:flex-start; position:relative}
 .cal-head{height:44px; display:flex; align-items:center; justify-content:space-between; position:relative}
 .cal-head button{height:44px; border:0; background:none; font-size:26px; color:var(--accent-dark); padding:0; line-height:1}
 .cal-head .nav{width:44px}
 .cal-head .cal-title{font-size:18px; font-weight:700; color:var(--ink); flex:1}
 .wk{display:grid; grid-template-columns:repeat(7,1fr); font-size:13px; color:var(--dim); text-align:center; height:20px; align-items:center}
-.grid-wrap{overflow:hidden}
+/* 週末兩欄只是「略深」，不用紅色：這不是行事曆的假日，週末沒有特別待遇 */
+.wk span:first-child, .wk span:last-child{color:rgba(var(--ink-rgb),.75)}
+/* 月曆吃掉高機型多出來的高度：格子跟著長高（星星是百分比定位，會一起長），但最高到 64px 為止 */
+.grid-wrap{overflow:hidden; flex:1 1 auto; min-height:0; display:flex; flex-direction:column; justify-content:flex-start}
 /* pan-y 之外要留 pinch-zoom：老花讀者靠兩指放大，月曆正是最需要放大的地方 */
-.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; touch-action:pan-y pinch-zoom}
+.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; touch-action:pan-y pinch-zoom;
+  grid-auto-rows:minmax(44px, 1fr); flex:1 1 auto; max-height:calc(64px * 6 + 6px * 5)}
+/* 320 寬的機型格子只有 36px 寬，列高下限跟著縮，不然月曆會比以前多捲一截 */
+@media (max-width:340px){ .grid{grid-auto-rows:minmax(36px, 1fr)} .cell{min-height:36px} }
 .grid.slide-l{animation:slideL .2s ease-out}
 .grid.slide-r{animation:slideR .2s ease-out}
 @keyframes slideL{from{transform:translateX(40px);opacity:.3}to{transform:none;opacity:1}}
 @keyframes slideR{from{transform:translateX(-40px);opacity:.3}to{transform:none;opacity:1}}
 .cell{
-  aspect-ratio:1/1; border-radius:12px; border:0; padding:0; position:relative;
+  /* 高度跟著列走（grid-auto-rows）：高手機有餘裕時格子長高到 64px，星星用百分比定位會跟著散開；矮手機維持 44px */
+  min-height:44px; border-radius:12px; border:0; padding:0; position:relative;
   background:var(--card); box-shadow:inset 0 0 0 100px rgba(0,0,0,.02); overflow:hidden;
 }
 .cell.has{box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.cell.today{box-shadow:inset 0 0 0 2px var(--accent-dark)}
+/* 今天：外框之外再加一層淡主題色底，有星星的日子也一眼看得出哪一格是今天 */
+.cell.today{box-shadow:inset 0 0 0 2px var(--accent-dark);
+  background:linear-gradient(rgba(var(--accent-rgb),.12), rgba(var(--accent-rgb),.12)) var(--card)}
 .cell.gold{box-shadow:inset 0 0 0 2px var(--gold-line)}
 .cell.today.gold{box-shadow:inset 0 0 0 2px var(--accent-dark), inset 0 0 0 4px var(--gold-line)}
-.cell.future{opacity:.35; box-shadow:none}
+.cell.future{opacity:.28; box-shadow:none}
 .cell.blank{visibility:hidden}
 .cell.shake{animation:shake .3s}
 @keyframes shake{0%,100%{transform:none}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
@@ -137,16 +156,27 @@ svg{display:block}
   width:18px; height:18px; border-radius:50%; background:var(--accent-dark); color:#fff;
   font-size:10px; font-weight:800; display:grid; place-items:center; line-height:1;
 }
+/* 「−N」徽章：釘死在右上角、比以前小一號，讓出中間給星星 */
 .cell .m{
-  position:absolute; top:3px; right:3px; width:16px; height:16px; border-radius:50%;
-  background:var(--grey-badge); color:#fff; font-size:10px; font-weight:700; display:grid; place-items:center; line-height:1;
+  position:absolute; top:3px; right:3px; width:15px; height:15px; border-radius:50%;
+  background:var(--grey-badge); color:#fff; font-size:9px; font-weight:700; display:grid; place-items:center; line-height:1;
 }
 .cell .m.fade{animation:fadeIn .3s}
 .cell .g{position:absolute; top:2px; right:3px; width:12px; height:12px; --s-fill:var(--gold); --s-stroke:var(--gold-dark)}
-.cell .g.withm{right:21px}
+.cell .g.withm{right:20px}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .cell.flash{animation:cellFlash .2s}
 @keyframes cellFlash{0%{background:rgba(var(--accent-rgb),.3)}100%{background:var(--card)}}
+/* 星星落格的一次性光暈：放在格子裡（格子 overflow:hidden），用漸層收邊，擴到最大時已經全透明 */
+.cell .glow{
+  position:absolute; left:50%; top:50%; width:120%; aspect-ratio:1/1; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(var(--accent-rgb),.85) 0%, rgba(var(--accent-rgb),.35) 45%, rgba(var(--accent-rgb),0) 70%);
+  transform:translate(-50%,-50%) scale(.4); opacity:0; animation:cellGlow .35s ease-out;
+}
+@keyframes cellGlow{
+  from{transform:translate(-50%,-50%) scale(.4); opacity:.6}
+  to{transform:translate(-50%,-50%) scale(1.6); opacity:0}
+}
 
 /* ───────── 4. 主操作列 ───────── */
 .actions{flex:0 0 96px; display:flex; align-items:center; gap:12px; padding:0 16px}
@@ -233,11 +263,15 @@ svg{display:block}
   position:fixed; left:0; right:0; bottom:calc(148px + env(safe-area-inset-bottom) + var(--kb, 0px)); background:var(--card); border-radius:20px 20px 0 0;
   box-shadow:0 -6px 24px rgba(0,0,0,.14);
   /* 收起時要退到「自己的高度 + 底下操作列」之外，不然會露一截在畫面上 */
-  transform:translateY(calc(100% + 200px)); transition:transform .24s cubic-bezier(.2,.8,.2,1);
+  /* 進場先快後緩（iOS 的味道），退場短一點 */
+  transform:translateY(calc(100% + 200px)); transition:transform .2s cubic-bezier(.2,.8,.2,1);
   z-index:65; padding:10px 16px 12px; will-change:transform; visibility:hidden;
 }
-#reasonPanel.on{transform:none; visibility:visible}
-#reasonPanel .ttl{font-size:14px; color:var(--dim); display:flex; justify-content:space-between; align-items:center; margin-bottom:8px}
+#reasonPanel.on{transform:none; visibility:visible; transition-duration:.22s}
+#reasonPanel .ttl{font-size:14px; color:var(--dim); display:flex; justify-content:flex-start; gap:6px; align-items:center; margin-bottom:8px}
+/* 標題列的孩子頭像：只是認人用的裝飾（aria-hidden），文字節點不動 */
+#reasonPanel .ttl .rpAva{flex:0 0 auto; display:inline-flex; align-items:center; line-height:0}
+#reasonPanel .ttl .rpAva img.face{vertical-align:baseline}
 
 /* ───────── 共用：chips、toast、sheet ───────── */
 .chips{display:flex; flex-wrap:wrap; gap:8px}
@@ -254,6 +288,8 @@ svg{display:block}
 .chevx.up{transform:rotate(180deg)}
 .chip{height:44px; padding:0 14px; border-radius:22px; border:1.5px solid var(--accent-dark); background:none; color:var(--ink); font-size:16px; white-space:nowrap; flex:0 0 auto; transition:background-color .12s, color .12s}
 .chip.on{background:var(--accent-dark); color:#fff}
+/* 選中的勾勾只能是裝飾：程式用 textContent 比對 chip，文字節點一個字都不能加 */
+.chip.on::before{content:"✓ "}
 .chip.grey{border-color:var(--grey)}
 .chip.grey.on{background:var(--grey); border-color:var(--grey); color:#fff}
 .inrow{display:flex; gap:8px; margin-top:10px}
@@ -265,10 +301,11 @@ svg{display:block}
 #toast{
   position:fixed; left:16px; right:16px; bottom:calc(156px + env(safe-area-inset-bottom) + var(--kb, 0px)); background:#3A3A3A; color:#fff;
   border-radius:14px; padding:10px 8px 10px 14px; font-size:14px; line-height:1.4; display:flex; align-items:center; gap:8px;
-  opacity:0; transform:translateY(10px); transition:.2s; z-index:80; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.25);
+  opacity:0; transform:translateY(10px); transition:opacity .2s ease, transform .2s ease; z-index:80; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.25);
 }
 :root{--kb:0px}
-#toast.on{opacity:1; transform:none}
+/* 進場 .22s 先快後緩、退場 .2s */
+#toast.on{opacity:1; transform:none; transition:opacity .22s cubic-bezier(.2,.8,.2,1), transform .22s cubic-bezier(.2,.8,.2,1)}
 #toast span{flex:1; pointer-events:none}
 #toast button{margin-left:auto; background:none; border:1.5px solid rgba(255,211,107,.75); border-radius:12px; color:#FFD36B; font-weight:700; font-size:16px; min-height:44px; min-width:64px; padding:0 12px; white-space:nowrap; pointer-events:auto}
 /* 吐司淡出後按鈕要一起退場：父層 opacity:0 藏不住它——它仍接點擊、仍在 Tab 順序裡，
@@ -276,16 +313,18 @@ svg{display:block}
 #toast:not(.on) button{visibility:hidden}
 /* 原因面板開著時，toast 改貼畫面頂端——面板會長高（還有誰也做了），別去猜它的高度 */
 #reasonPanel.on ~ #toast{bottom:auto; top:calc(env(safe-area-inset-top) + 8px)}
+/* sheet 開著時同理：吐司壓在半張面板底下等於沒出現過（兩條同時成立時值一樣，不會打架） */
+body.sheetOpen #toast{bottom:auto; top:calc(env(safe-area-inset-top) + 8px)}
 
 .scrim{position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .2s; z-index:70}
 .scrim.on{opacity:1; pointer-events:auto}
 .sheet{
   position:fixed; left:0; right:0; bottom:var(--kb, 0px); background:var(--card); border-radius:20px 20px 0 0;
-  transform:translateY(100%); transition:transform .24s cubic-bezier(.2,.8,.2,1); z-index:71;
+  transform:translateY(100%); transition:transform .2s cubic-bezier(.2,.8,.2,1); z-index:71;
   max-height:88vh; max-height:calc(88dvh - var(--kb, 0px)); display:flex; flex-direction:column; padding-bottom:env(safe-area-inset-bottom);
   box-shadow:0 -6px 30px rgba(0,0,0,.15); will-change:transform;
 }
-.sheet.open{transform:none}
+.sheet.open{transform:none; transition-duration:.28s}   /* 進場 .28s、退場 .2s（closeSheet 的 260ms 收尾還夠用） */
 .sheet.drag{transition:none}
 .sheet .hd{height:36px; display:grid; place-items:center; flex:0 0 36px; touch-action:none; position:relative}
 .sheet .hd i{width:36px; height:4px; border-radius:2px; background:#ddd}
@@ -464,8 +503,11 @@ img.face{border-radius:50%; object-fit:cover; display:inline-block; vertical-ali
   .tip{min-height:44px; font-size:13px}
 }
 @media (prefers-reduced-motion: reduce){
-  .kid.bounce .ava, .grid.slide-l, .grid.slide-r, .cell.shake, .cell.flash, .cell svg.s.pop{animation:none}
-  body, .sheet, #reasonPanel, #toast{transition:none}
+  .kid.bounce .ava, .grid.slide-l, .grid.slide-r, .cell.shake, .cell.flash, .cell svg.s.pop,
+  .kids.swap{animation:none}
+  .cell .glow{display:none}                     /* 落格光暈整個不畫，不留半透明殘影 */
+  .kid .ava, .kid .nm{transition:none}          /* 選中的底盤與名字顏色瞬間切換 */
+  body, .sheet, .sheet.open, #reasonPanel, #reasonPanel.on, #toast, #toast.on{transition:none}
 }
 </style>
 </head>
@@ -1567,6 +1609,13 @@ function switchKid(id){
   state.lastKid = id; save();
   SFX.tick();
   applyTheme(); renderAll();
+  /* 整列是重建出來的（瞬間換人）：補一個很短的淡入。class 要在 renderAll 之後加，
+     renderKids 會整個覆寫 host.className */
+  const row = $('kids');
+  if (!reduceMotion()){
+    row.classList.remove('swap'); void row.offsetWidth; row.classList.add('swap');
+    setTimeout(() => row.classList.remove('swap'), 200);
+  }
   const el = [...$('kids').querySelectorAll('.kid')].find(b => b.classList.contains('on'));
   if (el){ el.classList.add('bounce'); setTimeout(() => el.classList.remove('bounce'), 300); }
   nextTip();
@@ -1575,10 +1624,27 @@ function switchKid(id){
 }
 
 /* ───────── 2. 總數區 ───────── */
+/* 大數字換人／換月時滾過去（280ms、先快後慢）。差一顆以內直接寫：
+   逐顆落地與扣除本來就是一下一下的回饋，而且 deductFeedback 靠「renderAll 前後 heroNum 的字」判斷要不要淡入 */
+let heroRoll = 0;
+function setHeroNum(n){
+  const el = $('heroNum');
+  if (heroRoll){ cancelAnimationFrame(heroRoll); heroRoll = 0; }
+  const from = parseInt(el.textContent, 10);
+  if (!Number.isFinite(from) || Math.abs(n - from) < 2 || reduceMotion()){ el.textContent = n; return; }
+  const t0 = performance.now(), dur = 280;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    if (p >= 1){ el.textContent = n; heroRoll = 0; return; }
+    el.textContent = Math.round(from + (n - from) * (1 - Math.pow(1 - p, 3)));
+    heroRoll = requestAnimationFrame(step);
+  };
+  heroRoll = requestAnimationFrame(step);
+}
 function renderHero(){
   const k = cur(); const fly = inFlightCount(k.id);
   const n = Math.max(0, netOf(k.id) - fly);   /* 還在飛的那幾顆落地才算進畫面；飛行中扣一顆不能讓數字變負 */
-  $('heroNum').textContent = n;
+  setHeroNum(n);
   const dots = $('dots'); dots.textContent = '';
   for (let i = 0; i < 10; i++) dots.append(h('i', { class: i < n % 10 ? 'on' : '' }));
   const ms = monthStats(k.id, view.y, view.m);
@@ -1587,9 +1653,14 @@ function renderHero(){
   const left = (nextBig - n <= 10 ? nextBig : nextMile) - n;
   const parts = [`${view.y === new Date().getFullYear() && view.m === new Date().getMonth() ? '這個月' : `${view.m+1} 月`} ⭐ ${ms.plus}`];
   if (ms.minus) parts.push(`扣 ${ms.minus}`);
-  parts.push(`再 ${left} 顆滿 ${n + left}`);
+  const mainPart = `再 ${left} 顆滿 ${n + left}`;   /* 這一行的主句：倒數（文案不動，aria 的 parts 順序也不動） */
+  parts.push(mainPart);
   if (!lastSaveOk) parts.push('⚠️ 尚未存檔');
-  $('heroSub').textContent = parts.join(' ・ ');
+  /* 排版上把主句提到前面、加大加深，其餘縮一號跟在後面；aria-label 仍用 parts 原本的順序 */
+  const sub = $('heroSub'); sub.textContent = '';
+  sub.append(h('span', { class:'hs-main', text:mainPart }));
+  const side = parts.filter(p => p !== mainPart);
+  if (side.length) sub.append(h('span', { class:'hs-side', text:' ・ ' + side.join(' ・ ') }));
 
   /* 第二行：隨時看得到「總好棒」可以換幾顆（使用者拍板：可兌換數要常駐主畫面；
      「一共蓋過／扣過」的歷史統計退到紀錄頁看）。大數字照舊是收集數，不因兌換變少 */
@@ -1939,6 +2010,7 @@ function openSheet(id){
   if (openSheetId && openSheetId !== id){ const prev = $(openSheetId); prev.classList.remove('open'); sheetHidden(prev, true); }
   if (!already && !openSheetId) sheetOpener = document.activeElement;   /* 關閉後把焦點還回去 */
   openSheetId = id; $('scrim').classList.add('on');
+  document.body.classList.add('sheetOpen');   /* 吐司改貼畫面頂端，不然會被半張面板壓住 */
   backdropInert(true);
   sheetHidden($(id), false);
   $(id).classList.add('open');
@@ -1956,6 +2028,7 @@ function closeSheet(){
   if (!openSheetId) return;
   const el = $(openSheetId);
   el.classList.remove('open'); $('scrim').classList.remove('on'); openSheetId = null;
+  document.body.classList.remove('sheetOpen');   /* 沒有 sheet 開著了，吐司回到原本的位置 */
   /* 引導不管從哪條路關掉（開始蓋章、×、Esc、點遮罩、下拉），都算看過了：
      不然每次開 app 都要再跳一次。要重看的話設定頁「其他」有按鈕 */
   if (el.id === 'welcomeSheet' && state && !state.settings.onboarded){ state.settings.onboarded = true; save(); }
@@ -2225,6 +2298,13 @@ function land(ev){
     const stars = cell.querySelectorAll('svg.s'); const s = stars[stars.length-1];
     if (s) s.classList.add('pop');
     cell.classList.add('flash'); setTimeout(() => cell.classList.remove('flash'), 250);
+    /* 落格光暈：一次性元素，播完就拿掉（批次連蓋時每一顆都有；下一次重建月曆也會一起清掉） */
+    if (!reduceMotion()){
+      const glow = h('i', { class:'glow', 'aria-hidden':'true' });
+      glow.addEventListener('animationend', () => glow.remove());
+      setTimeout(() => glow.remove(), 800);   /* 動畫沒播（分頁在背景）也要清乾淨 */
+      cell.append(glow);
+    }
   }
   anim($('heroNum'), [{ transform:'scale(1.25)' }, { transform:'scale(1)' }], 200);
   const n = netOf(ev.kid) - inFlightCount(ev.kid); const d = $('dots').children[(n-1+10) % 10];
@@ -2409,7 +2489,12 @@ function showReasonPanel(job){
   const kid = kidById(job.kid);
   const nBatch = job.batchIds ? job.batchIds.length : 1;
   /* 標題帶名字：批次飛行中切到別的孩子，面板會在別人的頁面上冒出來，沒名字會寫錯人 */
-  $('reasonPanel').querySelector('.ttl span').textContent = nBatch > 1 ? `${kid.name} 這 ${nBatch} 顆是因為什麼？（可以不填）` : `${kid.name} 做了什麼？（可以不填）`;
+  /* 標題列放一顆孩子頭像認人（純裝飾、aria-hidden）。文字一律寫進帶 aria-live 的那個 span：
+     頭像沒有照片時本身就是 <span>，用 '.ttl span' 會寫錯地方 */
+  const ttl = $('reasonPanel').querySelector('.ttl');
+  const oldAva = ttl.querySelector('.rpAva'); if (oldAva) oldAva.remove();
+  ttl.insertBefore(h('span', { class:'rpAva', 'aria-hidden':'true' }, avaFace(kid, 22)), ttl.firstChild);
+  ttl.querySelector('[aria-live]').textContent = nBatch > 1 ? `${kid.name} 這 ${nBatch} 顆是因為什麼？（可以不填）` : `${kid.name} 做了什麼？（可以不填）`;
   $('rpUndo').textContent = nBatch > 1 ? `蓋錯了，拿掉這 ${nBatch} 顆` : '蓋錯了，拿掉這顆';
   const chips = $('rpChips'); chips.textContent = '';
   $('rpCustom').classList.add('hide'); $('rpInput').value = '';
