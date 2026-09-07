@@ -2363,8 +2363,21 @@ async function celebrateTen(kid, T, anchorId){
       await wait(700);
     }
   } else {
+    /* 節奏跟著內容走：有寫原因的那顆多停一下（480ms），孩子才來得及看完那句字幕；
+       沒寫原因的沒東西可看，維持 115ms 快速跳過——十顆都有原因約 4.8 秒，都沒有就跟以前一樣快 */
+    const dwell = i => (recent[i] && recent[i].reason) ? 480 : 115;
+    let total = 0; for (let i = 0; i < 10; i++) total += dwell(i);
+    /* 逐顆 await 的中途沒有跳過的入口：整段（點星星＋最後的煙火停留）用同一個 tapToSkip 蓋住，
+       迴圈裡看旗標決定要不要提早收尾，自然跑完的話就在最後 await 掉剩下的 1900ms */
+    let skipped = false;
+    const skip = tapToSkip(total + 1900);
+    skip.then(() => { skipped = true; });
     for (let i = 0; i < 10; i++){
-      await wait(115);
+      if (skipped){
+        slots.slice(i).forEach(s => s.classList.add('lit'));   /* 跳過：剩下的星星一次補齊，不留半排暗的 */
+        line.textContent = '';                                 /* 字幕也不停在半路上那一句 */
+        break;
+      }
       slots[i].classList.add('lit');
       anim(slots[i], [{ transform:'scale(.4)' }, { transform:'scale(1.35)', offset:.6 }, { transform:'scale(1)' }], 160);
       SFX.step(i);
@@ -2372,11 +2385,12 @@ async function celebrateTen(kid, T, anchorId){
          而這個儀式的全部意義就是「這一顆＝這件事」 */
       const r = recent[i] && recent[i].reason;
       line.textContent = r || '';
+      await wait(dwell(i));
     }
     SFX.ten(); FX.confettiSides(80);
     /* 幫別的孩子（批次蓋）觸發的慶祝，不能放大「目前畫面上這個孩子」的總數 */
     if (kid.id === state.lastKid) anim($('heroNum'), [{ transform:'scale(1)' }, { transform:'scale(1.6)', offset:.5 }, { transform:'scale(1.6)', offset:.75 }, { transform:'scale(1)' }], { duration:600, easing:'cubic-bezier(.34,1.56,.64,1)' });
-    await tapToSkip(1900);
+    await skip;
   }
   lay.style.pointerEvents = '';
   lay.classList.remove('on');
@@ -2796,6 +2810,24 @@ function openMulti(key){
 }
 $('editBtn').onclick = () => openDay(todayKey());
 $('hero').onclick = openRecords;
+/* 在總數區左右滑換孩子：抱著孩子單手用手機時，頭像那一列太小、也太靠上。
+   門檻跟月曆換月同一組（>60px 才算滑），所以一般點擊照樣開紀錄頁。
+   到頭就停、不循環——五個孩子時繞圈會不知道現在翻到誰 */
+(() => {
+  let sx = 0, sy = 0, on = false;
+  const el = $('hero');
+  el.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; on = true; }, { passive:true });
+  el.addEventListener('touchend', e => {
+    if (!on) return; on = false;
+    if (state.kids.length < 2) return;                       /* 單孩家庭沒有可以換的人 */
+    const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (!(Math.abs(dx) > 60 && Math.abs(dy) < 40)) return;
+    const i = state.kids.findIndex(k => k.id === state.lastKid);
+    if (i < 0) return;
+    const n = Math.min(state.kids.length - 1, Math.max(0, i + (dx < 0 ? 1 : -1)));
+    switchKid(state.kids[n].id);
+  }, { passive:true });
+})();
 
 /* ───────── 日期 sheet（路徑 B） ───────── */
 function openDay(key){
@@ -2867,11 +2899,17 @@ function eventList(evs, refresh){
     else if (e.type === 'adjust'){ row.append(h('span', { class:'rs', text:`調整總好棒 ${e.n > 0 ? '+' : ''}${e.n}${e.reason ? '：' + e.reason : ''}` })); }
     else {
       const rs = h('button', { class:'rs' + (e.reason ? '' : ' empty'), text: e.reason || '沒寫原因，點一下補', onclick: () => {
-        const inp = h('input', { value:e.reason, placeholder:`${kidById(e.kid).name} 做了什麼？`, maxlength:'40', enterkeyhint:'done' });
-        const sv = h('button', { text:'儲存', onclick: () => { e.reason = inp.value.trim(); rememberReason(kidById(e.kid), e.reason, e.type === 'minus'); save(); refresh(); } });
-        inp.addEventListener('keydown', ev => { if (ev.key === 'Enter'){ ev.preventDefault(); sv.click(); } });
-        const wrap = h('div', { class:'inrow', style:'flex:1;margin:0' }, inp, sv);
-        rs.replaceWith(wrap); inp.focus();
+        /* 補原因跟蓋章、扣除同一種語彙：先給一排常用原因，點一下就存；
+           想手打才按「其他…」展開輸入框（睡前一起看那條路上，家長不想每次都打字） */
+        const k = kidById(e.kid), deduct = e.type === 'minus';
+        const commit = v => { e.reason = String(v || '').trim(); rememberReason(k, e.reason, deduct); save(); refresh(); };
+        const picker = chipPicker(reasonChipsFor(k, deduct), {
+          grey: deduct, placeholder:`${k.name} 做了什麼？`,
+          onPick: v => commit(v),                 /* 點常用原因立刻存；手打時是「其他…」裡那顆儲存按下才進來 */
+        });
+        if (e.reason) picker.input.value = e.reason;   /* 改字時舊的那句先帶著，不用重打 */
+        const wrap = h('div', { style:'flex:1;min-width:0' }, picker.el);
+        rs.replaceWith(wrap);
       } });
       row.append(rs);
     }
@@ -2950,7 +2988,7 @@ function openDeduct(key){
        停在別的月份時扣一顆，不翻月就只看到大數字少一顆（deductFeedback 裡的 renderAll 會重畫） */
     const dm = parseKey(key);
     if (dm.getFullYear() !== view.y || dm.getMonth() !== view.m) view = { y:dm.getFullYear(), m:dm.getMonth() };
-    deductFeedback(kid.id, key, autoAdded);
+    deductFeedback(kid.id, key, autoAdded, reason);
   };
   hold.addEventListener('pointerdown', e => {
     if (timer) return; pid = e.pointerId; hold.classList.add('holding');
@@ -3047,14 +3085,21 @@ function openRedeem(){
   bd.append(h('button', { class:'lnk', text:'關閉', onclick: closeSheet, style:'margin:8px auto 0' }));
   openSheet('deductSheet');
 }
-function deductFeedback(kidId, key, autoAdded){
+function deductFeedback(kidId, key, autoAdded, reason){
   const old = $('heroNum').textContent;
   renderAll();
   const cell = $('grid').querySelector(`[data-date="${key}"] .m`); if (cell) cell.classList.add('fade');
   const num = $('heroNum'); if (num.textContent !== old) anim(num, [{ opacity:0 }, { opacity:1 }], 300);
   SFX.minus();
   const last = state.events[state.events.length-1];
-  setTimeout(() => toast('已扣一顆。記得把原因說給孩子聽。', { ms:4000, action:'復原', onAction: () => {
+  /* 選了原因就把那句話唸回來（跟蓋章面板的「⭐ 那句話」對稱）：
+     家長看到的是「扣的是哪一件事」，才好照著跟孩子講。吐司是單行，太長的原因截斷 */
+  const kk0 = kidById(kidId);
+  const r = String(reason || '').trim();
+  const msg = r
+    ? `已扣一顆：${r.length > 20 ? r.slice(0, 20) + '…' : r}。跟${kk0 ? kk0.name : '孩子'}說清楚這件事。`
+    : '已扣一顆。記得把原因說給孩子聽。';
+  setTimeout(() => toast(msg, { ms:4000, action:'復原', onAction: () => {
     if (removeEvent(last.id)){
       /* 復原＝這一顆從來沒發生：這一次才自動入列的扣除原因也收回 */
       const kk = kidById(kidId); if (autoAdded && kk) dropCustom(kk, autoAdded, true);
@@ -3576,7 +3621,17 @@ function openSettings(){
     if (pendingCloud){
       const cl = pendingCloud.cloud;
       const lastD = cl.events.map(e => e.date).sort().pop() || '—';
-      bd.append(h('div', { class:'warncard', text:`雲端已經有一份備份（${cl.events.length} 筆，最後一筆 ${lastD}），這支手機上也有 ${state.events.length} 筆。要用哪一份？你決定之前，兩邊都不會被動到。` }));
+      /* 只寫總筆數，看不出「差的是誰的星星」——兩邊都把每個孩子的顆數攤開，
+         家長才有東西可以比。算的是原始蓋章淨值（蓋 − 扣），跟主畫面大數字同一個口徑；
+         雲端那份用它自己記的孩子名單（名字對不上也照列，這裡列的是事實，不是判斷） */
+      const perKid = st => (st.kids || []).map(k => {
+        const evs = (st.events || []).filter(e => e.kid === k.id);
+        return `${k.emoji || ''}${evs.filter(e => e.type === 'plus').length - evs.filter(e => e.type === 'minus').length}`;
+      }).join(' ');
+      bd.append(h('div', { class:'warncard' },
+        h('div', { text:`雲端已經有一份備份（${cl.events.length} 筆，最後一筆 ${lastD}）：${perKid(cl)}` }),
+        h('div', { text:`這支手機上也有 ${state.events.length} 筆：${perKid(state)}` }),
+        h('div', { text:'要用哪一份？你決定之前，兩邊都不會被動到。' })));
       const crow = h('div', { class:'btns' });
       let a1 = 0, a2 = 0;
       const useCloud = h('button', { class:'sbtn fill', text:'用雲端的（覆蓋這支手機）', onclick: () => {
