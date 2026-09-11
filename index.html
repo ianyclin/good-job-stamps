@@ -3165,8 +3165,7 @@ function openRecords(keepPage){
     const noR = byReason.get('') || null; byReason.delete('');
     const rows = [...byReason.entries()].sort((a, b) => b[1].last - a[1].last).slice(0, 12);
     if (rows.length){
-      bd.append(h('div', { class:'dgrp', style:'margin-top:24px', text:'做過的事（照時間排，不是排行榜）' }));
-      bd.append(h('p', { class:'sub', text:'這份清單也照出你最常注意到什麼。' }));
+      bd.append(h('div', { class:'dgrp', style:'margin-top:24px', text:'做過的事（最近做過的排前面）' }));
       const box = h('div', { class:'chips' });
       const tag = t => h('span', { class:'chip', style:'display:inline-flex;align-items:center;pointer-events:none', text:t });
       for (const [r, v] of rows) box.append(tag(`${r} ×${v.n}`));
