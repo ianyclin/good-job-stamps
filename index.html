@@ -292,6 +292,12 @@ svg{display:block}
 .chip.on::before{content:"✓ "}
 .chip.grey{border-color:var(--grey)}
 .chip.grey.on{background:var(--grey); border-color:var(--grey); color:#fff}
+/* 紀錄頁「做過的事」的統計 chip：它的正上方就是三顆真的可以按的鈕，
+   長得一樣一定會被按。拿掉外框一眼就知道是數字；不能按的東西也不需要 44px 觸控區。
+   只有這一種准許折行：原因最長 40 字，一顆就比面板還寬，而共用的 .chip 是
+   nowrap＋flex:0 0 auto，撐出去會讓整個紀錄頁變成可以左右拖動。
+   高度跟著改成下限——准許折行還鎖死 36px 的話，第二行會溢出去壓到別顆 */
+.chip.flat{height:auto; min-height:36px; border:0; border-radius:18px; background:var(--grey-bg); color:var(--ink); pointer-events:none; display:inline-flex; align-items:center; white-space:normal; max-width:100%}
 .inrow{display:flex; gap:8px; margin-top:10px}
 .inrow input{flex:1; height:44px; border-radius:12px; border:1.5px solid #ddd; padding:0 12px; font-size:16px; background:#fff; color:var(--ink); min-width:0}
 .inrow input:focus{outline:none; border-color:var(--accent-dark)}
@@ -338,6 +344,10 @@ body.sheetOpen #toast{bottom:auto; top:calc(env(safe-area-inset-top) + 8px)}
 .sheet .secBtn{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:44px; text-align:left; background:none; border:0; padding:0; font-weight:700}
 .sheet .secBtn i{font-style:normal; font-size:14px; flex:0 0 auto; transition:transform .18s}
 .sheet .secBtn[aria-expanded="true"] i{transform:rotate(180deg)}
+/* 紀錄頁的兩個區塊標題（「做過的事」的摺疊鈕、「只看哪一種紀錄」）是同一層的東西，
+   字級就要一樣：跟 13px 灰色的 .sec 分開，用跟月份帶同一階的 15px 深色。
+   .sec 別處還在用，所以另開一個共用 class 疊上去，不動 .sec 本身 */
+.sheet .recLbl{font-size:15px; color:var(--ink); font-weight:700; margin:18px 0 8px}
 .pbtn{width:100%; height:64px; border-radius:18px; border:0; background:var(--accent-dark); color:#fff; font-size:20px; font-weight:800; margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px}
 .pbtn svg{width:24px; height:24px; --s-fill:#fff; --s-stroke:rgba(0,0,0,.12)}
 .pbtn:active{transform:scale(.97)}
@@ -355,6 +365,15 @@ body.sheetOpen #toast{bottom:auto; top:calc(env(safe-area-inset-top) + 8px)}
 .row .del.arm{color:#C0392B; font-weight:700}
 .empty-note{font-size:14px; color:#767676; padding:14px 0}
 .dgrp{font-size:13px; color:var(--dim); margin:14px 0 2px; font-weight:700}
+/* 月份小計：總計與每天明細之間本來缺的那一層。每個月的第一天上面一條。
+   用 ink 不用 dim，是因為這是要唸出來的事實數字，13px 灰字對阿公阿嬤太弱；
+   顏色一律走 --ink-rgb，三個孩子的主題色才都對得上 */
+.mgrp{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:22px 0 2px; padding-top:12px; border-top:1px solid rgba(var(--ink-rgb),.12); font-size:15px; font-weight:700; color:var(--ink)}
+/* 320px 上「2026 年 12 月」會被右邊的小計擠到折成兩行：月份不准折、小計自己收縮 */
+.mgrp > span:first-child{flex:0 0 auto; white-space:nowrap}
+.mgrp .n{font-size:14px; font-weight:400; color:rgba(var(--ink-rgb),.82); text-align:right; min-width:0}
+/* 頁面上第一條不畫線：上面已經有篩選那一排，再來一條線是多的 */
+.mgrp.first{margin-top:10px; padding-top:0; border-top:0}
 
 /* 長按扣除鈕 */
 .hold{
@@ -2811,7 +2830,9 @@ function openMulti(key){
   openSheet('deductSheet');
 }
 $('editBtn').onclick = () => openDay(todayKey());
-$('hero').onclick = openRecords;
+/* 一定要包一層：直接掛 openRecords 會把 MouseEvent 當成 keepPage 傳進去（truthy），
+   從頭像點進紀錄頁就永遠不會歸零——載到 160 天、關掉再開還是 160 天 */
+$('hero').onclick = () => openRecords();
 /* 在總數區左右滑換孩子：抱著孩子單手用手機時，頭像那一列太小、也太靠上。
    門檻跟月曆換月同一組（>60px 才算滑），所以一般點擊照樣開紀錄頁。
    到頭就停、不循環——五個孩子時繞圈會不知道現在翻到誰 */
@@ -3121,6 +3142,16 @@ $('minusBtn').onclick = () => {
    一次只畫 40 天，其餘按「載入更早的」再補：
    累積兩三年之後一口氣建幾千列，iPhone 會整個卡住。 */
 let recordsDays = 40;
+/* 紀錄頁「看的方式」：重繪要留著（刪一列、補原因都會整頁重建），關掉再打開要歸零。
+   不進 state、不 save()——這是看的方式不是資料，寫進去會動到雲端同步的基準。
+   而且這一頁可能被阿公阿嬤看到，他們看到的必須是完整的、每次都一樣的樣子 */
+let recFactsOpen = true;         /* 「做過的事」有沒有展開（預設展開） */
+let recFactsAll = false;         /* 「做過的事」是不是看全部種類（預設只看最近 12 種） */
+let recFilter = 'all';           /* 'all'／'minus'／'other' */
+/* 重繪後要不要捲回最上面：只有從頭像新開這一頁才設。
+   換一種來看、收合、看全部都留在原處——「做過的事」會把那一排選項推到摺線以下，
+   捲回頁首的話，剛按下去的那顆跟按出來的結果兩個都看不到 */
+let recTop = false;
 let reasonEditKidId = null;      /* 設定頁「常用原因」目前在編輯哪個孩子 */
 let settingsTab = 'kids';        /* 設定頁目前的次分頁 */
 /* 備份分頁的「進階：GitHub 雲端備份」有沒有展開，重繪時要保持。
@@ -3129,31 +3160,33 @@ let cloudAdvOpen = null;
 let lastSettingsTab = null;
 let lastSnapCount = 0;           /* 快照清單上次的筆數：重繪時先佔位，版面不跳 */
 function openRecords(keepPage){
-  if (!keepPage) recordsDays = 40;
-  const kid = cur(); const bd = $('recordsBd'); bd.textContent = '';
+  /* 從頭像重新打開＝回到完整的樣子：三天前按過的篩選還黏著，是最典型的「我的資料不見了」 */
+  /* 連捲動位置一起歸零：bd 是同一個元素，上次關掉時捲到哪還留在上面，
+     不歸零的話從頭像打開會停在半路 */
+  if (!keepPage){ recordsDays = 40; recFilter = 'all'; recFactsAll = false; recFactsOpen = true; recTop = true; }
+  const kid = cur(); const bd = $('recordsBd');
+  /* 除了從頭像新開，一律留在原處：不管是刪一列、補原因、載入更早，
+     還是換一種來看，手指按的地方跟眼睛看的地方都不該被搬走 */
+  const sc = recTop ? 0 : bd.scrollTop; recTop = false;
+  /* 整頁會被換掉，焦點會掉到 body：用 id 記住剛才在哪一顆，append 完再接回去。
+     不能用 textContent 比對——.chip.on::before 會讓選中的那顆多出一個勾勾 */
+  const af = document.activeElement;
+  const refocus = (af && bd.contains(af) && af.id) ? af.id : null;
+  bd.textContent = '';
+  /* 先塞進 fragment 最後一次上版：日期多起來時，每列都對已上版的 bd 做 append 會反覆重排 */
+  const frag = document.createDocumentFragment();
   const evs = eventsOf(kid.id).slice().sort((a, b) => b.date.localeCompare(a.date) || b.ts - a.ts);
   const plus = evs.filter(e => e.type==='plus').length, minus = evs.filter(e => e.type==='minus').length;
-  bd.append(h('h2', {}, avaFace(kid, 26), ` ${kid.name} 的紀錄`));
+  frag.append(h('h2', {}, avaFace(kid, 26), ` ${kid.name} 的紀錄`));
   const redeems = evs.filter(e => e.type === 'redeem').length;
-  /* 歷史統計的家：主畫面第二行只掛「總好棒可以換幾顆」，一共蓋過／扣過在這裡看 */
-  bd.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}${redeems ? `，換過 ${redeems} 次東西` : ''}，總好棒 ${walletOf(kid.id)} 顆可以換。點原因可以補寫或修改。` : `還沒有任何紀錄。今天找一件 ${kid.name} 做到的小事吧。` }));
-  if (plus) bd.append(h('button', { class:'sbtn fill', style:'width:100%;margin-bottom:14px', text:`跟 ${kid.name} 一起看這週 ⭐`, onclick: openReview }));
-  const groups = {};
-  for (const e of evs){ (groups[e.date] = groups[e.date] || []).push(e); }
-  const dates = Object.keys(groups);
-  const shown = dates.slice(0, recordsDays);
-  for (const date of shown){
-    const d = parseKey(date);
-    bd.append(h('div', { class:'dgrp', text:`${d.getFullYear()} 年 ${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）` }));
-    bd.append(eventList(groups[date].sort((a, b) => a.ts - b.ts), () => openRecords(true)));
-  }
-  if (dates.length > shown.length){
-    bd.append(h('button', { class:'sbtn', style:'width:100%;margin-top:16px',
-      text:`載入更早的紀錄（還有 ${dates.length - shown.length} 天）`,
-      onclick: () => { recordsDays += 60; openRecords(true); } }));
-  }
-  /* 做過的事：照時間排、放在最底——這面鏡子照的是家長自己注意到了什麼，
-     不照次數排，免得變成行為排行榜 */
+  /* 歷史統計的家：主畫面第二行只掛「總好棒可以換幾顆」，一共蓋過／扣過在這裡看。
+     這一行講的是這個孩子的全部，不跟著下面的篩選變 */
+  frag.append(h('p', { class:'sub', text: evs.length ? `一共蓋過 ${plus} 顆${minus ? `，扣過 ${minus} 顆` : ''}${redeems ? `，換過 ${redeems} 次東西` : ''}，總好棒 ${walletOf(kid.id)} 顆可以換。點原因可以補寫或修改。` : `還沒有任何紀錄。今天找一件 ${kid.name} 做到的小事吧。` }));
+  if (plus) frag.append(h('button', { class:'sbtn fill', style:'width:100%;margin-bottom:14px', text:`跟 ${kid.name} 一起看這週 ⭐`, onclick: openReview }));
+
+  /* ── 做過的事：照最後做過的時間排，不照次數排，免得變成行為排行榜。
+     這面鏡子照的是家長自己最近在注意什麼，所以永遠只算蓋章、永遠掃全部歷史，
+     不跟著篩選縮放——跟著縮放就變成「最近被扣什麼」，等於 app 替家長下結論 */
   if (plus){
     const byReason = new Map();
     for (const e of evs){
@@ -3163,17 +3196,140 @@ function openRecords(keepPage){
       v.n++; v.last = Math.max(v.last, e.ts); byReason.set(r, v);
     }
     const noR = byReason.get('') || null; byReason.delete('');
-    const rows = [...byReason.entries()].sort((a, b) => b[1].last - a[1].last).slice(0, 12);
-    if (rows.length){
-      bd.append(h('div', { class:'dgrp', style:'margin-top:24px', text:'做過的事（最近做過的排前面）' }));
-      const box = h('div', { class:'chips' });
-      const tag = t => h('span', { class:'chip', style:'display:inline-flex;align-items:center;pointer-events:none', text:t });
-      for (const [r, v] of rows) box.append(tag(`${r} ×${v.n}`));
-      if (noR) box.append(h('span', { class:'chip grey', style:'display:inline-flex;align-items:center;pointer-events:none', text:`沒寫原因 ×${noR.n}` }));
-      bd.append(box);
+    const named = [...byReason.entries()].sort((a, b) => b[1].last - a[1].last);
+    /* 一顆都沒寫過原因的家庭也要看得到「沒寫是哪件事 ×N」，不能整塊無聲消失 */
+    if (named.length || noR){
+      frag.append(h('button', { class:'sec secBtn recLbl', id:'recFactsHead',
+        'aria-expanded': recFactsOpen ? 'true' : 'false', 'aria-controls':'recFacts',
+        onclick: () => { recFactsOpen = !recFactsOpen; openRecords(true); } },
+        h('span', { text:'做過的事（最近做過的排前面）' }), h('i', { text:'⌄', 'aria-hidden':'true' })));
+      /* 收著的時候也要把空的 #recFacts 放進去（跟進階區 cloudAdv 同一個做法）：
+         標題的 aria-controls 指著這個 id，元素不存在的話 VoiceOver 會指到空氣。
+         align-items:center 只給這個盒子：36px 的數字 chip 跟 44px 的「看全部」鈕同列時，
+         上緣對齊會讓兩排字的中線差 4px。共用的 .chips 別處在用，不動它 */
+      const box = h('div', { class:'chips', id:'recFacts', style:'margin:0 0 6px; align-items:center' });
+      if (recFactsOpen){
+        if (recFilter !== 'all') box.append(h('p', { class:'sub', style:'width:100%;margin:0', text:'這一區一直都算全部日子蓋過的章，下面選哪一種都不會變。' }));
+        const tag = t => h('span', { class:'chip flat', text:t });
+        for (const [r, v] of (recFactsAll ? named : named.slice(0, 12))) box.append(tag(`${r} ×${v.n}`));
+        /* 「沒寫是哪件事」永遠最後一顆，也不受 12 的上限管：它不是一種原因。
+           字要跟明細列裡那顆可以點的「沒寫原因，點一下補」分開，這顆是不能按的數字 */
+        if (noR) box.append(tag(`沒寫是哪件事 ×${noR.n}`));
+        /* 有外框的才可以按：這顆跟上面那排沒框的數字形成對比。
+           展開不設上限、不做內層捲動——中間嵌一塊手指壓上去整頁捲不動的區域，會被當成卡住 */
+        if (named.length > 12) box.append(h('button', { class:'chip', id:'recFactsAllBtn', 'aria-controls':'recFacts',
+          text: recFactsAll ? '只看最近 12 種' : `看全部 ${named.length} 種原因`,
+          onclick: () => { recFactsAll = !recFactsAll; openRecords(true); } }));
+      }
+      frag.append(box);
     }
   }
+
+  /* ── 篩選：扣除與兌換次數少但重要，混在大量蓋章裡很難找。
+     沒扣過的孩子不畫「只看扣除」——第一天就看到那顆，等於 app 在暗示可以扣。
+     但目前正指著它時要留著，不然在「只看扣除」下刪掉最後一筆，按鈕會在腳下消失 */
+  const fMinus = minus > 0 || recFilter === 'minus';
+  const fOther = evs.some(e => e.type === 'redeem' || e.type === 'adjust') || recFilter === 'other';
+  if (fMinus || fOther){
+    frag.append(h('div', { class:'sec recLbl', id:'recFilterLabel', text:'只看哪一種紀錄' }));
+    const row = h('div', { class:'chips', id:'recFilterRow', role:'group', 'aria-labelledby':'recFilterLabel' });
+    const fbtn = (id, v, t) => h('button', { class:'chip' + (recFilter === v ? ' on' : ''), id,
+      'aria-pressed': recFilter === v ? 'true' : 'false', text:t,
+      onclick: () => { if (recFilter === v) return; recFilter = v; openRecords(true); } });
+    /* 「全部紀錄」不叫「全部」：上面那顆「看全部 N 種原因」才是原因清單，兩個全部要分得開。
+       「只看扣掉的」不叫「只看扣除」：app 其他地方都講「扣」，而且「扣除」跟每列右邊的「刪除」只差一個字 */
+    row.append(fbtn('recF_all', 'all', '全部紀錄'));
+    if (fMinus) row.append(fbtn('recF_minus', 'minus', '只看扣掉的'));
+    /* 紀念章不算「兌換和調整」：它是慶祝紀錄，不是帳務移動，只在「全部」出現 */
+    if (fOther) row.append(fbtn('recF_other', 'other', '只看兌換和調整'));
+    frag.append(row);
+  }
+
+  /* 篩選時不分頁：minus／redeem／adjust 的總量本來就遠小於「全部」現在畫的量，
+     還要按好幾次「載入更早」才找到東西的話，這個篩選就白做了。
+     400 筆那道閘只為了接住「舊帳一次匯入很多筆 adjust」這種沒人預期的情況 */
+  const keep = recFilter === 'minus' ? (e => e.type === 'minus')
+    : recFilter === 'other' ? (e => e.type === 'redeem' || e.type === 'adjust') : null;
+  const matched = keep ? evs.filter(keep) : evs;
+  const capped = !!keep && matched.length > 400;
+  const listed = capped ? matched.slice(0, 400) : matched;
+  const groups = {};
+  for (const e of listed){ (groups[e.date] = groups[e.date] || []).push(e); }
+  const dates = Object.keys(groups);
+  const shown = keep ? dates : dates.slice(0, recordsDays);
+
+  /* 月份小計一律算那個月真實的全部數字（在目前篩選之內），不因為按了「載入更早」而變大。
+     adjust 與 gold 不進「全部」模式的小計：第二節拍板調整不進大數字，上面那行總計也沒算它 */
+  const mstat = new Map();
+  for (const e of matched){
+    const mk = (e.date || '').slice(0, 7);
+    const v = mstat.get(mk) || { plus:0, minus:0, redeem:0, adjust:0 };
+    if (e.type === 'plus') v.plus++;
+    else if (e.type === 'minus') v.minus++;
+    else if (e.type === 'redeem') v.redeem++;
+    else if (e.type === 'adjust') v.adjust++;
+    mstat.set(mk, v);
+  }
+  /* 月份 key 一律取字串前七碼：YYYY-MM 的字典序就是時間序，跨年自動正確，
+     也躲開時區與壞掉的 ts。顯示時月份去掉前導零 */
+  const mLabel = mk => /^\d{4}-\d{2}$/.test(mk) ? `${mk.slice(0, 4)} 年 ${Number(mk.slice(5, 7))} 月` : '日期不明';
+  const mText = v => {
+    if (!v) return '';
+    /* 篩選時報的是眼前那些列的數字，小計才跟看到的東西對得起來；調整一律報次數不報顆數 */
+    const parts = recFilter === 'minus' ? [v.minus ? `扣 ${v.minus} 顆` : '']
+      : recFilter === 'other' ? [v.redeem ? `換 ${v.redeem} 次` : '', v.adjust ? `調整 ${v.adjust} 次` : '']
+      : [v.plus ? `蓋 ${v.plus} 顆` : '', v.minus ? `扣 ${v.minus} 顆` : '', v.redeem ? `換 ${v.redeem} 次` : ''];
+    return parts.filter(Boolean).join('，');
+  };
+
+  let lastMk = null, firstBand = true;
+  for (const date of shown){
+    /* 每個月都畫一條，包含頁面上的第一個月：只在跨月時畫，會變成月初兩條、月底一條都沒有 */
+    const mk = (date || '').slice(0, 7);
+    if (mk !== lastMk){
+      lastMk = mk;
+      frag.append(h('div', { class:'mgrp' + (firstBand ? ' first' : '') },
+        h('span', { text: mLabel(mk) }), h('span', { class:'n', text: mText(mstat.get(mk)) })));
+      firstBand = false;
+    }
+    const d = parseKey(date);
+    /* 年份搬到月份帶上了，日期這一行不再重複 */
+    frag.append(h('div', { class:'dgrp', text:`${d.getMonth()+1} 月 ${d.getDate()} 日（${WD[d.getDay()]}）` }));
+    frag.append(eventList(groups[date].sort((a, b) => a.ts - b.ts), () => openRecords(true)));
+  }
+  /* 只可能發生在「在某個篩選下刪掉該種最後一筆」：那顆 chip 還留著，配一句話說明 */
+  if (keep && !shown.length){
+    /* 用詞跟上面那顆鈕對齊：鈕叫「只看扣掉的」，這裡就不要冒出「扣除」這個別的說法 */
+    frag.append(h('p', { class:'empty-note', text: recFilter === 'minus' ? '還沒有扣掉的紀錄。' : '還沒有兌換或調整的紀錄。' }));
+  }
+  if (!keep){
+    /* 最舊那個月被 40 天視窗切一半時，小計照樣報整月——不講的話，
+       「蓋 50 顆」底下只列三天會被當成 bug */
+    if (dates.length > shown.length && dates[shown.length].slice(0, 7) === shown[shown.length-1].slice(0, 7)){
+      /* 不寫「小計」兩個字：畫面上沒有東西叫小計，而且「小計算的」會被讀成「小／計算的」 */
+      frag.append(h('p', { class:'sub', style:'margin-top:10px', text:'這個月還有更早的紀錄沒載入；上面那一條的數字，算的是整個月。' }));
+    }
+    if (dates.length > shown.length){
+      frag.append(h('button', { class:'sbtn', id:'recMoreBtn', style:'width:100%;margin-top:16px',
+        text:`載入更早的紀錄（還有 ${dates.length - shown.length} 天）`,
+        onclick: () => { recordsDays += 60; openRecords(true); } }));
+    }
+  }
+  /* 只有選了某一種時才會走到這裡，所以直接講「這一種」，不用「符合」這種工具話 */
+  if (capped) frag.append(h('p', { class:'sub', style:'margin-top:10px', text:'這一種紀錄超過 400 筆，這裡只列最近的 400 筆。' }));
+
+  bd.append(frag);
   openSheet('recordsSheet');
+  bd.scrollTop = sc;
+  if (refocus){
+    /* 整排選項可能在重繪後整個不見（在「只看扣掉的」下刪掉最後一筆扣除，再按「全部紀錄」，
+       那一排就沒有要畫的東西了）：找不到原來那顆就退到「做過的事」的標題，
+       再找不到就退到這一頁的關閉鈕——就是不要讓焦點掉回 body，掉回去鍵盤與 VoiceOver 會從頭開始 */
+    const again = document.getElementById(refocus)
+      || document.getElementById('recFactsHead')
+      || $('recordsSheet').querySelector('.shx');
+    if (again) try { again.focus({ preventScroll:true }); } catch (e) {}
+  }
 }
 
 /* ───────── 睡前一起看（孩子視角，唯讀） ─────────
